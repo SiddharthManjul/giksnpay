@@ -1,0 +1,22 @@
+{
+  "name": "@mindpay/domain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "clean": "rm -rf coverage dist",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ulidx": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "fast-check": "catalog:"
+  }
+}
