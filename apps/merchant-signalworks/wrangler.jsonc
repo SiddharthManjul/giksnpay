@@ -9,5 +9,13 @@
   },
   "vars": {
     "ENVIRONMENT": "development"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mindpay-signalworks-local",
+      "database_id": "00000000-0000-0000-0000-000000000002",
+      "migrations_dir": "migrations"
+    }
+  ]
 }
