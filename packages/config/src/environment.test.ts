@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { parseGatewayAuthEnvironment, parseWorkerEnvironment } from "./environment";
+import {
+  parseGatewayAuthEnvironment,
+  parseSignalWorksEnvironment,
+  parseWorkerEnvironment,
+} from "./environment";
 
 describe("worker environment", () => {
   it("accepts a named runtime environment", () => {
@@ -20,12 +24,14 @@ describe("gateway auth environment", () => {
         BETTER_AUTH_SECRET: "test-secret-with-more-than-thirty-two-characters",
         BETTER_AUTH_URL: "https://api.mindpay.test/",
         ENVIRONMENT: "production",
+        PASSKEY_RP_ID: "MINDPAY.TEST",
         TRUSTED_ORIGINS: "https://mindpay.test/, https://admin.mindpay.test",
       }),
     ).toEqual({
       BETTER_AUTH_SECRET: "test-secret-with-more-than-thirty-two-characters",
       BETTER_AUTH_URL: "https://api.mindpay.test",
       ENVIRONMENT: "production",
+      PASSKEY_RP_ID: "mindpay.test",
       TRUSTED_ORIGINS: ["https://mindpay.test", "https://admin.mindpay.test"],
     });
   });
@@ -35,6 +41,7 @@ describe("gateway auth environment", () => {
       BETTER_AUTH_SECRET: "test-secret-with-more-than-thirty-two-characters",
       BETTER_AUTH_URL: "https://api.mindpay.test",
       ENVIRONMENT: "production",
+      PASSKEY_RP_ID: "mindpay.test",
       TRUSTED_ORIGINS: "https://mindpay.test",
     };
 
@@ -54,5 +61,39 @@ describe("gateway auth environment", () => {
     expect(() =>
       parseGatewayAuthEnvironment({ ...valid, TRUSTED_ORIGINS: "http://mindpay.test" }),
     ).toThrow();
+    expect(() =>
+      parseGatewayAuthEnvironment({ ...valid, PASSKEY_RP_ID: "https://mindpay.test" }),
+    ).toThrow();
+    expect(() =>
+      parseGatewayAuthEnvironment({
+        ...valid,
+        PASSKEY_RP_ID: "other.test",
+        TRUSTED_ORIGINS: "https://mindpay.test",
+      }),
+    ).toThrow(/within the passkey RP ID/);
+  });
+});
+
+describe("SignalWorks environment", () => {
+  it("requires a canonical 32-byte key-encryption secret", () => {
+    const validSecret = "A".repeat(43);
+    expect(
+      parseSignalWorksEnvironment({
+        ENVIRONMENT: "development",
+        SIGNALWORKS_KEY_ENCRYPTION_KEY: validSecret,
+      }),
+    ).toEqual({
+      ENVIRONMENT: "development",
+      SIGNALWORKS_KEY_ENCRYPTION_KEY: validSecret,
+    });
+
+    for (const invalidSecret of ["short", `${validSecret}=`, "!".repeat(43)]) {
+      expect(() =>
+        parseSignalWorksEnvironment({
+          ENVIRONMENT: "development",
+          SIGNALWORKS_KEY_ENCRYPTION_KEY: invalidSecret,
+        }),
+      ).toThrow();
+    }
   });
 });
