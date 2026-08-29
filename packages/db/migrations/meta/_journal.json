@@ -8,6 +8,34 @@
       "when": 1787973765954,
       "tag": "0000_phase_02_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1787986000000,
+      "tag": "0001_organization_owner_integrity",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787986612600,
+      "tag": "0002_passkey_registration",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1787987779957,
+      "tag": "0003_auth_rate_limiting",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1788007273190,
+      "tag": "0004_demo_workspaces",
+      "breakpoints": true
     }
   ]
 }
