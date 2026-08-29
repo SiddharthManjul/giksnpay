@@ -1,11 +1,11 @@
 # MindPay implementation status
 
-Last updated: 2026-08-29
+Last updated: 2026-08-30
 
 ## Current phase
 
-Phases 0 and 1 are complete. Phase 2 is in progress. The next ticket is MP-0203, organization,
-membership, and role authorization.
+Phases 0, 1, and 2 are complete. Phase 3 is in progress. The next ticket is MP-0304, the ACP
+checkout state machine.
 
 ## Phase progress
 
@@ -13,8 +13,8 @@ membership, and role authorization.
 |---|---|---|
 | 0. Repository and guardrails | Complete | All workspaces build; format, lint, typecheck, and tests pass |
 | 1. Contracts, crypto, and protocols | Complete | Schema and cryptographic conformance tests pass |
-| 2. Database, auth, and tenancy | In progress | Auth, roles, passkeys, and audit immutability pass |
-| 3. SignalWorks merchant | Not started | Signed manifest, catalog, and ACP checkout pass |
+| 2. Database, auth, and tenancy | Complete | Auth, roles, passkeys, and audit immutability pass |
+| 3. SignalWorks merchant | In progress | Signed manifest, catalog, and ACP checkout pass |
 | 4. Marketplace and verification | Not started | Only verified services are discoverable |
 | 5. Agents and runtime | Not started | Typed approved tools and manual fallback work |
 | 6. Mandates, policy, and risk | Not started | ₹299 allows, ₹449 reviews, and ₹799 blocks |
@@ -162,6 +162,154 @@ Verification record: `docs/verification/phase-00.md`.
 - Added isolated Miniflare/D1 integration coverage for account creation, sign-in, session refresh,
   sign-out, invalidated-cookie rejection, and secret/session-token log leakage.
 - Documented local secret provisioning and recorded the auth session boundary in ADR-0008.
+- Verified `pnpm check` and `pnpm build` across all workspaces.
+
+### MP-0203 complete
+
+- Added the shared OWNER, ADMIN, BUILDER, REVIEWER, and VIEWER capability matrix for organization,
+  membership, agent, and approval actions.
+- Added strict shared contracts for the current user, organization access, member lists, role
+  mutations, and stable API errors.
+- Added authenticated `/api/v1/me` and current-organization read, update, member-list, and member-role
+  routes scoped through an explicit organization header.
+- Added non-enumerating organization and member lookups so missing and cross-organization objects
+  return identical 404 responses while known role denials remain explicit 403 responses.
+- Added race-safe D1 triggers that reject deleting or demoting the final organization owner.
+- Added real Better Auth and D1 integration coverage with explicit allow and deny cases for every
+  role, privileged assignment restrictions, and cross-organization access attempts.
+- Recorded the tenancy and authorization boundary in ADR-0009.
+- Verified `pnpm check` and `pnpm build` across all workspaces.
+
+### MP-0204 complete
+
+- Added strict RP ID configuration and validation requiring every trusted browser origin to be the
+  RP domain or one of its subdomains, with public environments remaining HTTPS-only.
+- Added D1 tables for hashed registration challenges and public passkey credential material, with
+  ownership, uniqueness, lifecycle, origin, RP ID, and session foreign-key constraints.
+- Added authenticated registration options and verification routes using SimpleWebAuthn, required
+  resident credentials and user verification, five-minute expiry, exact session/origin binding,
+  and atomic consume-before-verify replay protection.
+- Added safe credential list, rename, and delete routes that never expose authenticator credential
+  IDs, public keys, WebAuthn user handles, counters, or private material.
+- Added Miniflare/D1 coverage for expiry, same-user cross-session rejection, trusted cross-origin
+  rejection, success and failure replay, public-only persistence, and cross-user management denial.
+- Recorded the passkey registration boundary in ADR-0010.
+- Verified `pnpm check` and `pnpm build` across all workspaces.
+
+### MP-0205 complete
+
+- Added one fail-closed browser boundary before every `/api/*` route with exact trusted-origin
+  matching, credentialed CORS, constrained preflights, Fetch Metadata enforcement, and trusted
+  origin requirements for cookie-authenticated mutations.
+- Kept originless non-browser requests available while rejecting every supplied untrusted or null
+  browser origin before authentication and application handlers run.
+- Enabled Better Auth's atomic database rate limiter in every environment with D1 persistence,
+  tighter credential mutation rules, `CF-Connecting-IP` as the only client IP source, ignored
+  spoofable `X-Forwarded-For`, and IPv6 /64 normalization.
+- Added the `rate_limit` schema and ordered migration with unique keys, positive counter checks, and
+  stale-row lookup indexing.
+- Added adversarial coverage across all exposed core auth mutations plus exact CORS/preflight
+  behavior, missing-origin cookies, session fixation, password-change replay, secure host-only
+  production cookies, durable counters, and forwarding-header bypass attempts.
+- Recorded the browser and abuse-control boundary in ADR-0011.
+- Verified `pnpm check` and `pnpm build` across all workspaces.
+
+### MP-0206 complete
+
+- Added authenticated `POST /api/v1/demo-workspaces` with a required canonical idempotency key and
+  an optional validated workspace name.
+- Bound request hashes and idempotency scopes to the authenticated user, returned the exact stored
+  response for sequential and concurrent identical retries, and rejected changed input with 409.
+- Provisioned the organization, OWNER membership, 24-hour demo metadata, and completed idempotency
+  response in one D1 batch.
+- Added the separate `demo_workspaces` schema and ordered migration so permanent organizations keep
+  their existing lifecycle model.
+- Made organization discovery and authorization expiry-aware while retaining expired database rows
+  for later cleanup and evidence work.
+- Added Miniflare/D1 coverage for atomic persistence, repeated and concurrent idempotency, changed
+  input, required keys, per-user key scope, cross-user read/mutation denial, and expired access.
+- Recorded the demo provisioning and lifecycle boundary in ADR-0012.
+- Verified `pnpm check` and `pnpm build` across all workspaces.
+
+### MP-0207 and Phase 2 complete
+
+- Added one fail-fast `pnpm verify:phase-02` command covering real local D1 migrations and integrity,
+  strict auth contracts, the shared RBAC policy, and Gateway security integration behavior.
+- Verified migration reproducibility, all 14 Phase 2 tables, four integrity triggers, final-owner
+  enforcement, and rejection of audit event updates and deletes.
+- Verified session lifecycle and fixation resistance, passkey proof boundaries, explicit role
+  allow/deny behavior, non-enumerating BOLA responses, credentialed CORS and CSRF enforcement,
+  durable rate limiting, and isolated idempotent demo provisioning.
+- Passed 87 focused Phase 2 Vitest cases plus the D1 integrity probes against local Worker and D1
+  runtimes.
+- Refreshed ADR-0007 through ADR-0012 and recorded the reproducible exit evidence in
+  `docs/verification/phase-02.md`.
+- Verified `pnpm check` and `pnpm build` across all workspaces.
+
+Verification record: `docs/verification/phase-02.md`.
+
+## Phase 3 activity
+
+### MP-0301 complete
+
+- Added a separate SignalWorks D1 schema and ordered migration for its stable merchant identity and
+  purpose-isolated signing keys.
+- Added distinct manifest, catalog, checkout, and event ES256 keys with activation, retirement,
+  overlap, and immutable revocation metadata.
+- Wrapped private JWKs with A256GCM using merchant/key/purpose authenticated context and exposed only
+  strictly validated public JWK records.
+- Added lifecycle-aware signing, planned rotation overlap, idempotent revocation, and fail-closed
+  denial for revoked, retired, unknown, or incorrectly wrapped keys.
+- Added an idempotent `seed:local` command that applies migrations through Wrangler, reuses the same
+  persistent local D1 bindings as development, and validates the stored wrapping secret.
+- Verified two real local seed executions returned the same merchant creation time and exact public
+  keys without exposing private or encrypted material.
+- Added 11 SignalWorks tests covering schema declarations, sequential and concurrent reseeding,
+  purpose-specific signature verification, wrong-secret rejection, D1 constraint attacks, planned
+  rotation, revocation, and conflicting identity denial.
+- Recorded the separate merchant signing boundary in ADR-0013.
+- Verified `pnpm check` and `pnpm build` across all workspaces.
+
+### MP-0302 complete
+
+- Added a strict `{ manifest, signature }` publication contract and draft 2020-12 JSON Schema; the
+  detached ES256 signature covers only the canonical manifest payload and must use the same `kid`.
+- Added a reusable MindPay verifier that binds the body to the exact requested and final well-known
+  URL, rejects redirects and unexpected status, and validates domain, audience, issuance, expiry,
+  public-key lifecycle, and canonical signature in one fail-closed result.
+- Published `GET /.well-known/mindpay.json` with the exact SignalWorks origin, root ACP base,
+  catalog and MCP endpoints, `razorpay:test`, 24-hour maximum expiry, and all four public
+  purpose-isolated signing keys.
+- Clamped manifest expiry to any earlier key retirement or revocation boundary and marked each
+  nonce-specific response `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`.
+- Added 6 contract tests proving valid canonical verification and rejection of redirects, final-URL
+  changes, coherent domain substitution, expiry, and a one-byte payload mutation.
+- Added 2 Miniflare/D1 integration tests proving the Worker signs with its persisted encrypted
+  manifest key, exposes no private JWK material, publishes exact metadata, and never redirects
+  similar paths to the trust endpoint.
+- Recorded the signed publication boundary in ADR-0014.
+- Verified `pnpm check` and `pnpm build` across all workspaces.
+
+### MP-0303 complete
+
+- Added immutable `merchant_service_versions` D1 persistence keyed by merchant, stable service ID,
+  and semantic version, with typed columns for integer INR price, fulfilment, policy, availability,
+  and publication metadata.
+- Added D1 triggers rejecting every update and delete plus conflicting insert, upsert, or
+  `INSERT OR REPLACE` attempt while allowing exact idempotent seed conflicts.
+- Seeded fixed version `1.0.0` records for Market Snapshot at `29900`, Detailed Competitor Dossier
+  at `44900`, and Enterprise Intelligence Pack at `79900` INR subunits with stable fulfilment tool
+  bindings and publication timestamps.
+- Added a strict `{ catalog, signature }` contract and JSON Schema, then published
+  `GET /catalog/feed.json` with a fresh nonce, 24-hour maximum expiry, exact seller and audience,
+  and a canonical signature from the catalog-only key.
+- Proved the service set remains identical across seed and feed refreshes while issuance, nonce,
+  expiry, and signature may refresh independently; a one-byte catalog change fails verification.
+- Added 6 SignalWorks schema, D1, and endpoint tests plus 2 shared contract/schema tests for the
+  signed catalog envelope.
+- Applied the real local migration and ran the local seed twice; both runs returned the same three
+  service versions and exact identity/key material.
+- Recorded the immutable signed catalog boundary in ADR-0015.
 - Verified `pnpm check` and `pnpm build` across all workspaces.
 
 ## Blockers
