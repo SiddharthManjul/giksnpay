@@ -6,7 +6,7 @@ import {
 } from "../merchant";
 
 export const signalWorksManifestFixture = merchantManifestSchema.parse({
-  acp_base_url: "https://merchant-demo.example.com/acp",
+  acp_base_url: "https://merchant-demo.example.com/",
   audience: "https://api.mindpay.example/",
   catalog_url: "https://merchant-demo.example.com/catalog/feed.json",
   domain: "merchant-demo.example.com",
@@ -32,7 +32,7 @@ export const signalWorksManifestFixture = merchantManifestSchema.parse({
         x: "9QvAGuBVXXQsxhSLHjT68lqLPhRcNS7E3e2VLohFjHI",
         y: "eKdH2nsdbo9zkgquztJptOwJ9w5Ba7z-5fVkfSVenjw",
       },
-      purpose: ["manifest", "checkout", "event"],
+      purpose: ["manifest", "catalog", "checkout", "event"],
       valid_from: "2026-08-01T00:00:00.000Z",
     },
   ],
