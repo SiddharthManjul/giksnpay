@@ -10,6 +10,7 @@
   "vars": {
     "BETTER_AUTH_URL": "http://localhost:8787",
     "ENVIRONMENT": "development",
+    "PASSKEY_RP_ID": "localhost",
     "TRUSTED_ORIGINS": "http://localhost:3000"
   },
   "d1_databases": [
