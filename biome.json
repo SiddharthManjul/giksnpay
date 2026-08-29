@@ -10,6 +10,7 @@
       "!**/coverage",
       "!**/dist",
       "!**/node_modules",
+      "!packages/protocol-acp/src/generated",
       "!protocol/acp/2026-04-17"
     ]
   },
