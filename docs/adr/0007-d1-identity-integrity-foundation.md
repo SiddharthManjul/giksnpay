@@ -45,6 +45,10 @@ one empty database, applies them independently to a second empty database, compa
 schema, and proves the uniqueness, check, and append-only constraints with accepted and rejected
 statements.
 
+At the Phase 2 exit, the complete ordered migration set produces 14 application tables and four
+integrity triggers. The added tables cover passkey credentials and challenges, durable auth rate
+limits, and expiring demo-workspace metadata without changing the append-only audit boundary.
+
 ## Consequences
 
 - MP-0202 can map Better Auth directly to the four core Drizzle tables.
@@ -70,6 +74,7 @@ statements.
 
 ## Verification
 
+- `pnpm verify:phase-02`
 - `pnpm --filter @mindpay/db migrations:verify`
 - `pnpm --filter @mindpay/db test`
 - `pnpm check`
