@@ -4,6 +4,7 @@ import { z } from "zod";
 const STABLE_IDENTIFIER_PATTERN = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/u;
 const KEY_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/u;
 const BASE64URL_256_BIT_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
+const BASE64URL_ES256_SIGNATURE_PATTERN = /^[A-Za-z0-9_-]{85}[AQgw]$/u;
 const SEMANTIC_VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u;
 const NONCE_PATTERN = /^[A-Za-z0-9._:-]{16,128}$/u;
 
@@ -145,12 +146,12 @@ export const es256PublicJwkSchema = z
   .strict()
   .readonly();
 
-export const merchantSigningPurposeSchema = z.enum(["checkout", "event", "manifest"]);
+export const merchantSigningPurposeSchema = z.enum(["catalog", "checkout", "event", "manifest"]);
 
 const merchantSigningPurposesSchema = z
   .array(merchantSigningPurposeSchema)
   .min(1)
-  .max(3)
+  .max(4)
   .refine(uniqueStringArray, "Signing-key purposes must be unique")
   .readonly();
 
@@ -253,6 +254,37 @@ export const merchantManifestSchema = z
   })
   .readonly();
 
+export const es256CanonicalSignatureSchema = z
+  .object({
+    alg: z.literal("ES256"),
+    kid: z.string().regex(KEY_ID_PATTERN, "Key ID is not canonical"),
+    signature: z
+      .string()
+      .regex(
+        BASE64URL_ES256_SIGNATURE_PATTERN,
+        "ES256 signature must be 64 bytes of canonical unpadded base64url",
+      ),
+  })
+  .strict()
+  .readonly();
+
+export const signedMerchantManifestSchema = z
+  .object({
+    manifest: merchantManifestSchema,
+    signature: es256CanonicalSignatureSchema,
+  })
+  .strict()
+  .superRefine((publication, context) => {
+    if (publication.signature.kid !== publication.manifest.kid) {
+      context.addIssue({
+        code: "custom",
+        message: "Manifest signature kid must equal the signed manifest kid",
+        path: ["signature", "kid"],
+      });
+    }
+  })
+  .readonly();
+
 export const serviceAvailabilitySchema = z.enum(["available", "paused", "unavailable"]);
 export const fulfilmentTypeSchema = z.enum(["mcp", "rest"]);
 
@@ -350,6 +382,23 @@ export const merchantCatalogSchema = z
           });
         }
       }
+    }
+  })
+  .readonly();
+
+export const signedMerchantCatalogSchema = z
+  .object({
+    catalog: merchantCatalogSchema,
+    signature: es256CanonicalSignatureSchema,
+  })
+  .strict()
+  .superRefine((publication, context) => {
+    if (publication.signature.kid !== publication.catalog.kid) {
+      context.addIssue({
+        code: "custom",
+        message: "Catalog signature kid must equal the signed catalog kid",
+        path: ["signature", "kid"],
+      });
     }
   })
   .readonly();
@@ -474,10 +523,14 @@ export const merchantCheckoutSchema = z
 
 export type MerchantIdentity = z.infer<typeof merchantIdentitySchema>;
 export type Es256PublicJwk = z.infer<typeof es256PublicJwkSchema>;
+export type MerchantSigningPurpose = z.infer<typeof merchantSigningPurposeSchema>;
 export type MerchantSigningKey = z.infer<typeof merchantSigningKeySchema>;
 export type MerchantManifest = z.infer<typeof merchantManifestSchema>;
+export type Es256CanonicalSignature = z.infer<typeof es256CanonicalSignatureSchema>;
+export type SignedMerchantManifest = z.infer<typeof signedMerchantManifestSchema>;
 export type ServiceVersion = z.infer<typeof serviceVersionSchema>;
 export type MerchantCatalog = z.infer<typeof merchantCatalogSchema>;
+export type SignedMerchantCatalog = z.infer<typeof signedMerchantCatalogSchema>;
 export type MerchantOffer = z.infer<typeof merchantOfferSchema>;
 export type CheckoutLineItem = z.infer<typeof checkoutLineItemSchema>;
 export type MerchantCheckout = z.infer<typeof merchantCheckoutSchema>;
