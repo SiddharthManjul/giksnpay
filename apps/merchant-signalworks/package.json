@@ -8,6 +8,7 @@
     "clean": "rm -rf coverage dist",
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
+    "seed:local": "tsx ./scripts/seed-local.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -15,7 +16,15 @@
     "@hono/zod-openapi": "catalog:",
     "@mindpay/config": "workspace:*",
     "@mindpay/contracts": "workspace:*",
+    "@mindpay/crypto": "workspace:*",
+    "drizzle-orm": "catalog:",
     "hono": "catalog:",
     "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "miniflare": "catalog:",
+    "tsx": "catalog:",
+    "wrangler": "catalog:"
   }
 }
