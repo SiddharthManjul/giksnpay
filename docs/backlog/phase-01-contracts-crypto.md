@@ -113,7 +113,7 @@ Freeze the versioned cross-party objects used by policy, payment, fulfilment, an
 ### MP-0107: Vendor and verify ACP 2026-04-17
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0105
 - Size: 1-3 engineering days
 
@@ -123,12 +123,12 @@ Vendor the pinned official ACP snapshot with provenance, checksums, generated ty
 
 **Acceptance criteria**
 
-- [ ] The repository contains no floating ACP dependency or newer schema under the pinned path.
-- [ ] Official examples validate and intentionally malformed examples fail.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] The repository contains no floating ACP dependency or newer schema under the pinned path.
+- [x] Official examples validate and intentionally malformed examples fail.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ## Phase completion
 
-- [ ] Every ticket above is Done.
-- [ ] The exit gate is demonstrated in CI or a reproducible verification record.
-- [ ] Architecture changes are recorded in `docs/adr/`.
+- [x] Every ticket above is Done.
+- [x] The exit gate is demonstrated in CI or a reproducible verification record.
+- [x] Architecture changes are recorded in `docs/adr/`.
