@@ -226,6 +226,9 @@ importers:
 
   packages/contracts:
     dependencies:
+      '@mindpay/domain':
+        specifier: workspace:*
+        version: link:../domain
       zod:
         specifier: 'catalog:'
         version: 4.4.3
