@@ -79,7 +79,7 @@ Support signed objects, `kid` selection, revoked-key rejection, and encrypted pr
 ### MP-0105: Define merchant manifest, catalog, service, and checkout contracts
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0102
 - Size: 1-3 engineering days
 
@@ -89,14 +89,14 @@ Create strict Zod/JSON Schema contracts for merchant identity, signed catalogs, 
 
 **Acceptance criteria**
 
-- [ ] Unknown fields, floating prices, invalid origins, and unstable identifiers are rejected.
-- [ ] Representative valid SignalWorks fixtures pass.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Unknown fields, floating prices, invalid origins, and unstable identifiers are rejected.
+- [x] Representative valid SignalWorks fixtures pass.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0106: Define mandate, merchant-event, audit, entitlement, and evidence contracts
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0104, MP-0105
 - Size: 1-3 engineering days
 
@@ -106,9 +106,9 @@ Freeze the versioned cross-party objects used by policy, payment, fulfilment, an
 
 **Acceptance criteria**
 
-- [ ] Every signed object requires issuer, audience, `kid`, issue/expiry time, and nonce or `jti`.
-- [ ] Schemas reject missing proof bindings and inconsistent amount/currency fields.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Every signed object requires issuer, audience, `kid`, issue/expiry time, and nonce or `jti`.
+- [x] Schemas reject missing proof bindings and inconsistent amount/currency fields.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0107: Vendor and verify ACP 2026-04-17
 
