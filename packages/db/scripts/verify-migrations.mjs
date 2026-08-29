@@ -15,16 +15,25 @@ const expectedTables = [
   "account",
   "approval_challenges",
   "audit_events",
+  "demo_workspaces",
   "idempotency_records",
   "organization_members",
   "organizations",
+  "passkey_credentials",
+  "passkey_registration_challenges",
+  "rate_limit",
   "replay_nonces",
   "session",
   "user",
   "verification",
 ];
 
-const expectedTriggers = ["audit_events_no_delete", "audit_events_no_update"];
+const expectedTriggers = [
+  "audit_events_no_delete",
+  "audit_events_no_update",
+  "organization_members_preserve_owner_on_delete",
+  "organization_members_preserve_owner_on_update",
+];
 const hashA = "a".repeat(64);
 const hashB = "b".repeat(64);
 const hashC = "c".repeat(64);
@@ -50,13 +59,14 @@ try {
     .sort();
 
   assertEqual(tableNames, expectedTables, "Unexpected migrated table set");
-  assertEqual(triggerNames, expectedTriggers, "Append-only audit triggers are missing");
+  assertEqual(triggerNames, expectedTriggers, "Database integrity triggers are missing");
 
   const migrationCount = query(firstDatabase, "SELECT count(*) AS count FROM d1_migrations");
-  assert(migrationCount[0]?.count === 1, "The migration must be recorded exactly once");
+  assert(migrationCount[0]?.count === 5, "Every migration must be recorded exactly once");
 
   seedIntegrityRecords(firstDatabase);
   verifyUniqueness(firstDatabase);
+  verifyOwnerIntegrity(firstDatabase);
   verifyChecks(firstDatabase);
   verifyAuditImmutability(firstDatabase);
 
@@ -64,7 +74,7 @@ try {
   assert(auditCount[0]?.count === 1, "Rejected audit mutations changed the audit stream");
 
   process.stdout.write(
-    `D1 migration verification passed: ${tableNames.length} tables, ${triggerNames.length} append-only triggers, reproducible schema.\n`,
+    `D1 migration verification passed: ${tableNames.length} tables, ${triggerNames.length} integrity triggers, reproducible schema.\n`,
   );
 } finally {
   rmSync(temporaryRoot, { force: true, recursive: true });
@@ -99,9 +109,13 @@ function seedIntegrityRecords(persistTo) {
       `INSERT INTO session (id, user_id, token, expires_at, created_at, updated_at) VALUES ('ses_01JGFJH900H8M2APVYVDZ4R6AB', 'usr_01JGFJH900H8M2APVYVDZ4R6AA', '${"s".repeat(32)}', ${expiresAt}, ${createdAt}, ${createdAt})`,
       `INSERT INTO account (id, user_id, issuer, account_id, provider_id, created_at, updated_at) VALUES ('acc_01JGFJH900H8M2APVYVDZ4R6AC', 'usr_01JGFJH900H8M2APVYVDZ4R6AA', 'local:credential', 'owner@mindpay.test', 'credential', ${createdAt}, ${createdAt})`,
       `INSERT INTO verification (id, identifier, value, expires_at, created_at, updated_at) VALUES ('ver_01JGFJH900H8M2APVYVDZ4R6AD', 'owner@mindpay.test', 'opaque-verification-value', ${expiresAt}, ${createdAt}, ${createdAt})`,
+      `INSERT INTO rate_limit (id, key, count, last_request) VALUES ('rtl_01JGFJH900H8M2APVYVDZ4R6AP', '203.0.113.10|/sign-in/email', 1, ${createdAt})`,
+      `INSERT INTO passkey_credentials (id, user_id, name, credential_id, public_key, webauthn_user_id, counter, device_type, backed_up, transports, aaguid, created_at, updated_at) VALUES ('pkc_01JGFJH900H8M2APVYVDZ4R6AM', 'usr_01JGFJH900H8M2APVYVDZ4R6AA', 'Demo passkey', 'credential-demo-1', 'public-key-only', 'webauthn-user-demo', 0, 'singleDevice', 0, '["internal"]', '00000000-0000-0000-0000-000000000000', ${createdAt}, ${createdAt})`,
+      `INSERT INTO passkey_registration_challenges (id, session_id, user_id, challenge_hash, webauthn_user_id, rp_id, origin, expires_at, consumed_at, created_at) VALUES ('pkr_01JGFJH900H8M2APVYVDZ4R6AN', 'ses_01JGFJH900H8M2APVYVDZ4R6AB', 'usr_01JGFJH900H8M2APVYVDZ4R6AA', '${hashA}', 'webauthn-user-demo', 'mindpay.test', 'https://mindpay.test', ${expiresAt}, NULL, ${createdAt})`,
       `INSERT INTO organizations (id, name, slug, status, created_at, updated_at) VALUES ('org_01JGFJH900H8M2APVYVDZ4R6AE', 'Demo Workspace', 'demo-workspace', 'ACTIVE', ${createdAt}, ${createdAt})`,
       `INSERT INTO organizations (id, name, slug, status, created_at, updated_at) VALUES ('org_role_check', 'Role Check', 'role-check', 'ACTIVE', ${createdAt}, ${createdAt})`,
       `INSERT INTO organization_members (organization_id, user_id, role, created_at) VALUES ('org_01JGFJH900H8M2APVYVDZ4R6AE', 'usr_01JGFJH900H8M2APVYVDZ4R6AA', 'OWNER', ${createdAt})`,
+      `INSERT INTO demo_workspaces (organization_id, expires_at, created_at) VALUES ('org_01JGFJH900H8M2APVYVDZ4R6AE', ${expiresAt}, ${createdAt})`,
       `INSERT INTO replay_nonces (id, scope, nonce, subject_id, payload_hash, expires_at, consumed_at, created_at) VALUES ('rpl_01JGFJH900H8M2APVYVDZ4R6AF', 'merchant-event', 'nonce-demo-0001', 'merchant_demo', '${hashA}', ${expiresAt}, ${createdAt}, ${createdAt})`,
       `INSERT INTO approval_challenges (id, organization_id, user_id, transaction_id, purpose, challenge_hash, payload_hash, state, expires_at, consumed_at, created_at) VALUES ('chl_01JGFJH900H8M2APVYVDZ4R6AG', 'org_01JGFJH900H8M2APVYVDZ4R6AE', 'usr_01JGFJH900H8M2APVYVDZ4R6AA', 'ctx_01JGFJH900H8M2APVYVDZ4R6AH', 'TRANSACTION_STEP_UP', '${hashB}', '${hashC}', 'PENDING', ${expiresAt}, NULL, ${createdAt})`,
       `INSERT INTO idempotency_records (scope, key, request_hash, response_status, response_body, state, expires_at, created_at) VALUES ('checkout:create', 'idem_01JGFJH900H8M2APVYVDZ4R6AI', '${hashA}', NULL, NULL, 'PENDING', ${expiresAt}, ${createdAt})`,
@@ -128,6 +142,16 @@ function verifyUniqueness(persistTo) {
   );
   expectFailure(
     persistTo,
+    `INSERT INTO rate_limit (id, key, count, last_request) VALUES ('rtl_duplicate', '203.0.113.10|/sign-in/email', 2, ${createdAt})`,
+    "UNIQUE constraint failed: rate_limit.key",
+  );
+  expectFailure(
+    persistTo,
+    `INSERT INTO passkey_credentials (id, user_id, credential_id, public_key, webauthn_user_id, counter, device_type, backed_up, transports, aaguid, created_at, updated_at) VALUES ('pkc_duplicate', 'usr_01JGFJH900H8M2APVYVDZ4R6AA', 'credential-demo-1', 'other-public-key', 'other-webauthn-user', 0, 'singleDevice', 0, '[]', '00000000-0000-0000-0000-000000000000', ${createdAt}, ${createdAt})`,
+    "UNIQUE constraint failed: passkey_credentials.credential_id",
+  );
+  expectFailure(
+    persistTo,
     `INSERT INTO organizations (id, name, slug, status, created_at, updated_at) VALUES ('org_duplicate', 'Duplicate Workspace', 'demo-workspace', 'ACTIVE', ${createdAt}, ${createdAt})`,
     "organizations_slug_uq",
   );
@@ -135,6 +159,11 @@ function verifyUniqueness(persistTo) {
     persistTo,
     `INSERT INTO organization_members (organization_id, user_id, role, created_at) VALUES ('org_01JGFJH900H8M2APVYVDZ4R6AE', 'usr_01JGFJH900H8M2APVYVDZ4R6AA', 'ADMIN', ${createdAt})`,
     "UNIQUE constraint failed: organization_members.organization_id, organization_members.user_id",
+  );
+  expectFailure(
+    persistTo,
+    `INSERT INTO demo_workspaces (organization_id, expires_at, created_at) VALUES ('org_01JGFJH900H8M2APVYVDZ4R6AE', ${expiresAt}, ${createdAt})`,
+    "UNIQUE constraint failed: demo_workspaces.organization_id",
   );
   expectFailure(
     persistTo,
@@ -158,7 +187,50 @@ function verifyUniqueness(persistTo) {
   );
 }
 
+function verifyOwnerIntegrity(persistTo) {
+  expectFailure(
+    persistTo,
+    "UPDATE organization_members SET role = 'VIEWER' WHERE organization_id = 'org_01JGFJH900H8M2APVYVDZ4R6AE' AND user_id = 'usr_01JGFJH900H8M2APVYVDZ4R6AA'",
+    "organization requires at least one owner",
+  );
+  expectFailure(
+    persistTo,
+    "DELETE FROM organization_members WHERE organization_id = 'org_01JGFJH900H8M2APVYVDZ4R6AE' AND user_id = 'usr_01JGFJH900H8M2APVYVDZ4R6AA'",
+    "organization requires at least one owner",
+  );
+
+  execute(
+    persistTo,
+    [
+      `INSERT INTO user (id, name, email, email_verified, created_at, updated_at) VALUES ('usr_01JGFJH900H8M2APVYVDZ4R6AL', 'Second Owner', 'second-owner@mindpay.test', 1, ${createdAt}, ${createdAt})`,
+      `INSERT INTO organization_members (organization_id, user_id, role, created_at) VALUES ('org_01JGFJH900H8M2APVYVDZ4R6AE', 'usr_01JGFJH900H8M2APVYVDZ4R6AL', 'OWNER', ${createdAt})`,
+      "UPDATE organization_members SET role = 'VIEWER' WHERE organization_id = 'org_01JGFJH900H8M2APVYVDZ4R6AE' AND user_id = 'usr_01JGFJH900H8M2APVYVDZ4R6AA'",
+    ].join("; "),
+  );
+
+  const ownerCount = query(
+    persistTo,
+    "SELECT count(*) AS count FROM organization_members WHERE organization_id = 'org_01JGFJH900H8M2APVYVDZ4R6AE' AND role = 'OWNER'",
+  );
+  assert(ownerCount[0]?.count === 1, "A permitted owner transfer left an invalid owner count");
+}
+
 function verifyChecks(persistTo) {
+  expectFailure(
+    persistTo,
+    `INSERT INTO demo_workspaces (organization_id, expires_at, created_at) VALUES ('org_role_check', ${createdAt}, ${createdAt})`,
+    "demo_workspaces_expiry_valid",
+  );
+  expectFailure(
+    persistTo,
+    `INSERT INTO rate_limit (id, key, count, last_request) VALUES ('rtl_invalid', '203.0.113.11|/sign-in/email', 0, ${createdAt})`,
+    "rate_limit_count_positive",
+  );
+  expectFailure(
+    persistTo,
+    `INSERT INTO passkey_registration_challenges (id, session_id, user_id, challenge_hash, webauthn_user_id, rp_id, origin, expires_at, created_at) VALUES ('pkr_invalid', 'ses_01JGFJH900H8M2APVYVDZ4R6AB', 'usr_01JGFJH900H8M2APVYVDZ4R6AA', 'NOT-A-SHA256', 'webauthn-user-demo', 'mindpay.test', 'https://mindpay.test', ${expiresAt}, ${createdAt})`,
+    "passkey_registration_challenges_hash_valid",
+  );
   expectFailure(
     persistTo,
     `INSERT INTO replay_nonces (id, scope, nonce, payload_hash, expires_at, consumed_at, created_at) VALUES ('rpl_invalid', 'merchant-event', 'nonce-demo-0002', 'NOT-A-SHA256', ${expiresAt}, ${createdAt}, ${createdAt})`,
