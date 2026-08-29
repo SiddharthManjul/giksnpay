@@ -12,6 +12,8 @@ import {
   merchantManifestSchema,
   merchantOfferSchema,
   serviceVersionSchema,
+  signedMerchantCatalogSchema,
+  signedMerchantManifestSchema,
 } from "./merchant";
 
 describe("SignalWorks merchant fixtures", () => {
@@ -56,6 +58,56 @@ describe("SignalWorks merchant fixtures", () => {
 });
 
 describe("strict merchant boundaries", () => {
+  it("accepts only a strict canonical signed-manifest envelope", () => {
+    const publication = {
+      manifest: signalWorksManifestFixture,
+      signature: {
+        alg: "ES256",
+        kid: signalWorksManifestFixture.kid,
+        signature: `${"A".repeat(85)}A`,
+      },
+    };
+
+    expect(signedMerchantManifestSchema.parse(publication)).toEqual(publication);
+    expect(
+      signedMerchantManifestSchema.safeParse({
+        ...publication,
+        signature: { ...publication.signature, kid: "another-key" },
+      }).success,
+    ).toBe(false);
+    expect(
+      signedMerchantManifestSchema.safeParse({
+        ...publication,
+        signature: { ...publication.signature, signature: `${"A".repeat(85)}B` },
+      }).success,
+    ).toBe(false);
+    expect(signedMerchantManifestSchema.safeParse({ ...publication, unsigned: true }).success).toBe(
+      false,
+    );
+  });
+
+  it("accepts only a strict canonical signed-catalog envelope", () => {
+    const publication = {
+      catalog: signalWorksCatalogFixture,
+      signature: {
+        alg: "ES256",
+        kid: signalWorksCatalogFixture.kid,
+        signature: `${"A".repeat(85)}A`,
+      },
+    };
+
+    expect(signedMerchantCatalogSchema.parse(publication)).toEqual(publication);
+    expect(
+      signedMerchantCatalogSchema.safeParse({
+        ...publication,
+        signature: { ...publication.signature, kid: "another-key" },
+      }).success,
+    ).toBe(false);
+    expect(signedMerchantCatalogSchema.safeParse({ ...publication, unsigned: true }).success).toBe(
+      false,
+    );
+  });
+
   it.each([
     [merchantManifestSchema, signalWorksManifestFixture, "nonce"],
     [merchantCatalogSchema, signalWorksCatalogFixture, "nonce"],
