@@ -1,0 +1,2 @@
+# Generate a unique local value as documented in README.md. Never reuse this placeholder.
+SIGNALWORKS_KEY_ENCRYPTION_KEY=replace_with_32_bytes_of_unpadded_base64url
