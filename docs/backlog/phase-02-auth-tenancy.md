@@ -45,7 +45,7 @@ Provide secure account, session, verification, and sign-in flows compatible with
 ### MP-0203: Implement organisations, memberships, and role authorization
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0202
 - Size: 1-3 engineering days
 
@@ -55,14 +55,14 @@ Enforce OWNER, ADMIN, BUILDER, REVIEWER, and VIEWER capabilities at route and ob
 
 **Acceptance criteria**
 
-- [ ] Each role has explicit allow/deny integration tests.
-- [ ] Cross-organisation object access returns a non-enumerating authorization error.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Each role has explicit allow/deny integration tests.
+- [x] Cross-organisation object access returns a non-enumerating authorization error.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0204: Implement passkey registration and credential management
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0202
 - Size: 1-3 engineering days
 
@@ -72,14 +72,14 @@ Register and store WebAuthn public credentials for later mandate and step-up pro
 
 **Acceptance criteria**
 
-- [ ] Registration challenges expire, bind to the session and origin, and are single use.
-- [ ] A valid authenticator registration is persisted without private key material.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Registration challenges expire, bind to the session and origin, and are single use.
+- [x] A valid authenticator registration is persisted without private key material.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0205: Harden cookies, CSRF, CORS, and auth rate limits
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0202
 - Size: 1-3 engineering days
 
@@ -89,14 +89,14 @@ Apply browser and API controls before exposing authenticated mutation routes.
 
 **Acceptance criteria**
 
-- [ ] Cross-origin credentialed requests outside the allowlist fail.
-- [ ] CSRF, session fixation, and replay tests pass for all auth mutations.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Cross-origin credentialed requests outside the allowlist fail.
+- [x] CSRF, session fixation, and replay tests pass for all auth mutations.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0206: Provision isolated demo workspaces
 
 - Priority: High
-- Status: Ready
+- Status: Done
 - Depends on: MP-0203, MP-0204
 - Size: 1-3 engineering days
 
@@ -106,14 +106,14 @@ Create an idempotent demo entry flow with an organisation, owner membership, and
 
 **Acceptance criteria**
 
-- [ ] Repeated provisioning with the same idempotency key returns the same workspace.
-- [ ] One demo user cannot read or mutate another demo workspace.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Repeated provisioning with the same idempotency key returns the same workspace.
+- [x] One demo user cannot read or mutate another demo workspace.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0207: Complete tenancy and authentication security tests
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0201, MP-0203, MP-0205, MP-0206
 - Size: 1-3 engineering days
 
@@ -123,12 +123,12 @@ Close Phase 2 with migration, RBAC, passkey, BOLA, CSRF, and session security co
 
 **Acceptance criteria**
 
-- [ ] The Phase 2 security suite passes against local Worker and D1 instances.
-- [ ] `docs/status.md` and any auth/storage ADRs reflect the verified implementation.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] The Phase 2 security suite passes against local Worker and D1 instances.
+- [x] `docs/status.md` and any auth/storage ADRs reflect the verified implementation.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ## Phase completion
 
-- [ ] Every ticket above is Done.
-- [ ] The exit gate is demonstrated in CI or a reproducible verification record.
-- [ ] Architecture changes are recorded in `docs/adr/`.
+- [x] Every ticket above is Done.
+- [x] The exit gate is demonstrated in CI or a reproducible verification record.
+- [x] Architecture changes are recorded in `docs/adr/`.
