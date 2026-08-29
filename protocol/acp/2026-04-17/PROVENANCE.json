@@ -1,0 +1,21 @@
+{
+  "protocol": "Agentic Commerce Protocol",
+  "version": "2026-04-17",
+  "source_repository": "https://github.com/agentic-commerce-protocol/agentic-commerce-protocol",
+  "pinned_commit": "7fdd78df677a94dce04c770644b0fbbb1401272b",
+  "pinned_commit_url": "https://github.com/agentic-commerce-protocol/agentic-commerce-protocol/tree/7fdd78df677a94dce04c770644b0fbbb1401272b",
+  "release_commit": "9abf303f48088d170503a54502d612b8b1997897",
+  "released_path_last_modified_commit": "17adf494cf8b4bcb41967a0386188b8103316d2f",
+  "retrieved_on": "2026-08-29",
+  "source_archive_url": "https://codeload.github.com/agentic-commerce-protocol/agentic-commerce-protocol/tar.gz/7fdd78df677a94dce04c770644b0fbbb1401272b",
+  "source_archive_sha256": "993635e2560a5f5f23f4777bf20e3a4af042c1a2df24ab0d1eb5f5178be46e36",
+  "included_paths": [
+    "spec/2026-04-17/json-schema",
+    "spec/2026-04-17/openapi",
+    "spec/2026-04-17/openrpc",
+    "examples/2026-04-17",
+    "changelog/2026-04-17.md",
+    "LICENSE"
+  ],
+  "license": "Apache-2.0"
+}
