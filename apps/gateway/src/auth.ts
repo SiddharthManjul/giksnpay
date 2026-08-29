@@ -11,11 +11,13 @@ export interface GatewayAuthBindings {
   BETTER_AUTH_URL: string;
   DB: D1Database;
   ENVIRONMENT: string;
+  PASSKEY_RP_ID: string;
   TRUSTED_ORIGINS: string;
 }
 
 const authModelPrefixes = {
   account: "acc",
+  rateLimit: "rtl",
   session: "ses",
   user: "usr",
   verification: "ver",
@@ -34,6 +36,7 @@ export function createGatewayAuth(bindings: GatewayAuthBindings) {
     BETTER_AUTH_SECRET: bindings.BETTER_AUTH_SECRET,
     BETTER_AUTH_URL: bindings.BETTER_AUTH_URL,
     ENVIRONMENT: bindings.ENVIRONMENT,
+    PASSKEY_RP_ID: bindings.PASSKEY_RP_ID,
     TRUSTED_ORIGINS: bindings.TRUSTED_ORIGINS,
   });
   const secureCookies = environment.BETTER_AUTH_URL.startsWith("https://");
@@ -65,6 +68,10 @@ export function createGatewayAuth(bindings: GatewayAuthBindings) {
       },
       disableCSRFCheck: false,
       disableOriginCheck: false,
+      ipAddress: {
+        ipAddressHeaders: ["cf-connecting-ip"],
+        ipv6Subnet: 64,
+      },
       useSecureCookies: secureCookies,
     },
     appName: "MindPay",
@@ -87,6 +94,18 @@ export function createGatewayAuth(bindings: GatewayAuthBindings) {
       revokeSessionsOnPasswordReset: true,
     },
     logger: { disabled: true },
+    rateLimit: {
+      customRules: {
+        "/change-password": { max: 5, window: 60 },
+        "/sign-in/email": { max: 5, window: 60 },
+        "/sign-out": { max: 30, window: 60 },
+        "/sign-up/email": { max: 5, window: 60 },
+      },
+      enabled: true,
+      max: 120,
+      storage: "database",
+      window: 60,
+    },
     secret: environment.BETTER_AUTH_SECRET,
     session: {
       cookieCache: { enabled: false },
