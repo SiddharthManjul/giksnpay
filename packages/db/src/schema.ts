@@ -1,3 +1,4 @@
+import { organizationRoles } from "@mindpay/domain";
 import { sql } from "drizzle-orm";
 import {
   check,
@@ -9,8 +10,9 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-export const organizationRoles = ["OWNER", "ADMIN", "BUILDER", "REVIEWER", "VIEWER"] as const;
+export { organizationRoles };
 export const organizationStatuses = ["ACTIVE", "SUSPENDED", "EXPIRED"] as const;
+export const passkeyCredentialDeviceTypes = ["singleDevice", "multiDevice"] as const;
 export const approvalChallengePurposes = ["MANDATE_ACTIVATION", "TRANSACTION_STEP_UP"] as const;
 export const approvalChallengeStates = ["PENDING", "CONSUMED", "EXPIRED", "CANCELLED"] as const;
 export const idempotencyStates = ["PENDING", "COMPLETED", "FAILED"] as const;
@@ -117,6 +119,122 @@ export const verification = sqliteTable(
   ],
 );
 
+export const rateLimit = sqliteTable(
+  "rate_limit",
+  {
+    id: text("id").primaryKey(),
+    key: text("key").notNull(),
+    count: integer("count").notNull(),
+    lastRequest: integer("last_request").notNull(),
+  },
+  (table) => [
+    uniqueIndex("rate_limit_key_uq").on(table.key),
+    index("rate_limit_last_request_idx").on(table.lastRequest),
+    check("rate_limit_key_not_blank", sql`length(trim(${table.key})) between 1 and 1024`),
+    check("rate_limit_count_positive", sql`${table.count} >= 1`),
+    check("rate_limit_last_request_positive", sql`${table.lastRequest} > 0`),
+  ],
+);
+
+export const passkeyCredentials = sqliteTable(
+  "passkey_credentials",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    name: text("name"),
+    credentialId: text("credential_id").notNull(),
+    publicKey: text("public_key").notNull(),
+    webauthnUserId: text("webauthn_user_id").notNull(),
+    counter: integer("counter").notNull(),
+    deviceType: text("device_type", { enum: passkeyCredentialDeviceTypes }).notNull(),
+    backedUp: integer("backed_up", { mode: "boolean" }).notNull(),
+    transports: text("transports", { mode: "json" }).$type<readonly string[]>().notNull(),
+    aaguid: text("aaguid").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("passkey_credentials_credential_id_uq").on(table.credentialId),
+    index("passkey_credentials_user_id_idx").on(table.userId),
+    check(
+      "passkey_credentials_name_valid",
+      sql`${table.name} is null or length(trim(${table.name})) between 1 and 64`,
+    ),
+    check(
+      "passkey_credentials_credential_id_valid",
+      sql`length(${table.credentialId}) between 1 and 1024`,
+    ),
+    check(
+      "passkey_credentials_public_key_valid",
+      sql`length(${table.publicKey}) between 1 and 4096`,
+    ),
+    check(
+      "passkey_credentials_webauthn_user_id_valid",
+      sql`length(${table.webauthnUserId}) between 1 and 128`,
+    ),
+    check("passkey_credentials_counter_valid", sql`${table.counter} >= 0`),
+    check(
+      "passkey_credentials_device_type_valid",
+      sql`${table.deviceType} in ('singleDevice', 'multiDevice')`,
+    ),
+    check("passkey_credentials_transports_valid", sql`json_valid(${table.transports})`),
+    check("passkey_credentials_aaguid_valid", sql`length(${table.aaguid}) between 1 and 64`),
+    check(
+      "passkey_credentials_updated_after_created",
+      sql`${table.updatedAt} >= ${table.createdAt}`,
+    ),
+  ],
+);
+
+export const passkeyRegistrationChallenges = sqliteTable(
+  "passkey_registration_challenges",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => session.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    challengeHash: text("challenge_hash").notNull(),
+    webauthnUserId: text("webauthn_user_id").notNull(),
+    rpId: text("rp_id").notNull(),
+    origin: text("origin").notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    consumedAt: integer("consumed_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("passkey_registration_challenges_hash_uq").on(table.challengeHash),
+    index("passkey_registration_challenges_session_idx").on(table.sessionId),
+    index("passkey_registration_challenges_user_idx").on(table.userId),
+    index("passkey_registration_challenges_expires_at_idx").on(table.expiresAt),
+    check("passkey_registration_challenges_hash_valid", sha256Check(table.challengeHash)),
+    check(
+      "passkey_registration_challenges_webauthn_user_id_valid",
+      sql`length(${table.webauthnUserId}) between 1 and 128`,
+    ),
+    check(
+      "passkey_registration_challenges_rp_id_valid",
+      sql`length(${table.rpId}) between 1 and 253`,
+    ),
+    check(
+      "passkey_registration_challenges_origin_valid",
+      sql`length(${table.origin}) between 8 and 2048`,
+    ),
+    check(
+      "passkey_registration_challenges_expires_after_created",
+      sql`${table.expiresAt} > ${table.createdAt}`,
+    ),
+    check(
+      "passkey_registration_challenges_consumed_after_created",
+      sql`${table.consumedAt} is null or ${table.consumedAt} >= ${table.createdAt}`,
+    ),
+  ],
+);
+
 export const organizations = sqliteTable(
   "organizations",
   {
@@ -164,6 +282,21 @@ export const organizationMembers = sqliteTable(
       "organization_members_role_valid",
       sql`${table.role} in ('OWNER', 'ADMIN', 'BUILDER', 'REVIEWER', 'VIEWER')`,
     ),
+  ],
+);
+
+export const demoWorkspaces = sqliteTable(
+  "demo_workspaces",
+  {
+    organizationId: text("organization_id")
+      .primaryKey()
+      .references(() => organizations.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    index("demo_workspaces_expires_at_idx").on(table.expiresAt),
+    check("demo_workspaces_expiry_valid", sql`${table.expiresAt} > ${table.createdAt}`),
   ],
 );
 
@@ -337,9 +470,13 @@ export const schema = {
   account,
   approvalChallenges,
   auditEvents,
+  demoWorkspaces,
   idempotencyRecords,
   organizationMembers,
   organizations,
+  passkeyCredentials,
+  passkeyRegistrationChallenges,
+  rateLimit,
   replayNonces,
   session,
   user,
@@ -354,6 +491,14 @@ export type Account = typeof account.$inferSelect;
 export type NewAccount = typeof account.$inferInsert;
 export type Verification = typeof verification.$inferSelect;
 export type NewVerification = typeof verification.$inferInsert;
+export type RateLimit = typeof rateLimit.$inferSelect;
+export type NewRateLimit = typeof rateLimit.$inferInsert;
+export type DemoWorkspace = typeof demoWorkspaces.$inferSelect;
+export type NewDemoWorkspace = typeof demoWorkspaces.$inferInsert;
+export type PasskeyCredential = typeof passkeyCredentials.$inferSelect;
+export type NewPasskeyCredential = typeof passkeyCredentials.$inferInsert;
+export type PasskeyRegistrationChallenge = typeof passkeyRegistrationChallenges.$inferSelect;
+export type NewPasskeyRegistrationChallenge = typeof passkeyRegistrationChallenges.$inferInsert;
 export type Organization = typeof organizations.$inferSelect;
 export type NewOrganization = typeof organizations.$inferInsert;
 export type OrganizationMember = typeof organizationMembers.$inferSelect;
