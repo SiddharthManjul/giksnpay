@@ -4,16 +4,16 @@ Last updated: 2026-08-29
 
 ## Current phase
 
-Phase 0 is complete. Phase 1 is in progress with 6 of 7 tickets complete. The next ticket is MP-0107,
-the pinned ACP 2026-04-17 snapshot and conformance boundary.
+Phases 0 and 1 are complete. Phase 2 is in progress. The next ticket is MP-0203, organization,
+membership, and role authorization.
 
 ## Phase progress
 
 | Phase | Status | Exit gate |
 |---|---|---|
 | 0. Repository and guardrails | Complete | All workspaces build; format, lint, typecheck, and tests pass |
-| 1. Contracts, crypto, and protocols | In progress | Schema and cryptographic conformance tests pass |
-| 2. Database, auth, and tenancy | Not started | Auth, roles, passkeys, and audit immutability pass |
+| 1. Contracts, crypto, and protocols | Complete | Schema and cryptographic conformance tests pass |
+| 2. Database, auth, and tenancy | In progress | Auth, roles, passkeys, and audit immutability pass |
 | 3. SignalWorks merchant | Not started | Signed manifest, catalog, and ACP checkout pass |
 | 4. Marketplace and verification | Not started | Only verified services are discoverable |
 | 5. Agents and runtime | Not started | Typed approved tools and manual fallback work |
@@ -114,6 +114,54 @@ Verification record: `docs/verification/phase-00.md`.
   amount consistency, reconciliation facts, entitlement identity, audit-chain links, evidence
   outcomes, generated schemas, strictness, and immutability.
 - Recorded the signed cross-party proof graph in ADR-0005.
+- Verified `pnpm check` and `pnpm build` across all workspaces.
+
+### MP-0107 complete
+
+- Vendored all 33 official ACP `2026-04-17` OpenAPI, JSON Schema, OpenRPC, example, changelog, and
+  license artifacts from immutable upstream commit `7fdd78df677a94dce04c770644b0fbbb1401272b`.
+- Recorded the original release commit, last released-path modification, source archive digest, and
+  a SHA-256 manifest covering every official vendored file.
+- Added deterministic generation of strict TypeScript contracts and embedded runtime schema bundles
+  from all seven dated JSON Schema documents; generated code is rejected if it emits explicit
+  `any` or becomes stale.
+- Added typed Ajv draft 2020-12 validators, type guards, assertions, normalized errors, and public
+  ACP version and provenance constants in `@mindpay/protocol-acp`.
+- Added 73 tests covering snapshot provenance and integrity, 59 passing official examples, eight
+  byte-preserved known upstream example/schema mismatches, and deliberate malformed fixtures.
+- Recorded the pinned vendor boundary in ADR-0006 and the Phase 1 exit evidence in
+  `docs/verification/phase-01.md`.
+- Verified `pnpm check` and `pnpm build` across all workspaces.
+
+## Phase 2 activity
+
+### MP-0201 complete
+
+- Added Better Auth-compatible `user`, `session`, `account`, and `verification` Drizzle schemas for
+  the current issuer/account identity model.
+- Added organization and membership tables with fixed OWNER, ADMIN, BUILDER, REVIEWER, and VIEWER
+  roles, foreign keys, lifecycle checks, and uniqueness constraints.
+- Added replay nonce, approval challenge, and request-hash-bound idempotency foundations with
+  database-enforced hashes, expiry ordering, state consistency, and single-use uniqueness.
+- Added hash-linked audit event storage with unique transaction sequences, event hashes, JTIs, and
+  D1 triggers rejecting every update or delete.
+- Added the ordered `0000_phase_02_foundation.sql` migration and a local D1 verifier that applies it
+  reproducibly to independent empty databases and exercises accepted and rejected integrity cases.
+- Recorded the D1 identity and integrity boundary in ADR-0007.
+- Verified `pnpm check` and `pnpm build` across all workspaces.
+
+### MP-0202 complete
+
+- Integrated `better-auth/minimal` with the Drizzle D1 adapter at the Gateway's `/api/auth/*`
+  boundary and added strict auth URL, secret, environment, and trusted-origin configuration.
+- Added namespaced canonical IDs, encrypted OAuth-token storage, hashed verification identifiers,
+  explicit cookie attributes, database-backed sessions, and immediate revocation without a cookie
+  cache.
+- Added a cookie-only browser boundary that recursively removes session and provider credentials
+  from auth JSON while preserving HttpOnly cookie headers.
+- Added isolated Miniflare/D1 integration coverage for account creation, sign-in, session refresh,
+  sign-out, invalidated-cookie rejection, and secret/session-token log leakage.
+- Documented local secret provisioning and recorded the auth session boundary in ADR-0008.
 - Verified `pnpm check` and `pnpm build` across all workspaces.
 
 ## Blockers
