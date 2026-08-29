@@ -8,6 +8,16 @@
     "enabled": true
   },
   "vars": {
-    "ENVIRONMENT": "development"
-  }
+    "BETTER_AUTH_URL": "http://localhost:8787",
+    "ENVIRONMENT": "development",
+    "TRUSTED_ORIGINS": "http://localhost:3000"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mindpay-local",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+      "migrations_dir": "../../packages/db/migrations"
+    }
+  ]
 }
