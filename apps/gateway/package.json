@@ -15,7 +15,14 @@
     "@hono/zod-openapi": "catalog:",
     "@mindpay/config": "workspace:*",
     "@mindpay/contracts": "workspace:*",
+    "@mindpay/db": "workspace:*",
+    "@mindpay/domain": "workspace:*",
+    "better-auth": "catalog:",
     "hono": "catalog:",
     "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "miniflare": "catalog:"
   }
 }
