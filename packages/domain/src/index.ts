@@ -51,3 +51,15 @@ export {
   utcTimestampSchema,
   utcTimestampToEpochMilliseconds,
 } from "./time";
+
+export {
+  canAssignOrganizationRole,
+  getOrganizationCapabilities,
+  hasOrganizationCapability,
+  type OrganizationCapability,
+  organizationCapabilities,
+  organizationCapabilitySchema,
+  type OrganizationRole,
+  organizationRoles,
+  organizationRoleSchema,
+} from "./organization-authorization";
