@@ -1,11 +1,11 @@
 # MindPay implementation status
 
-Last updated: 2026-08-28
+Last updated: 2026-08-29
 
 ## Current phase
 
-Phase 0 is complete. Phase 1 is in progress with 4 of 7 tickets complete. The next ticket is MP-0105,
-merchant manifest, catalog, service, and checkout contracts.
+Phase 0 is complete. Phase 1 is in progress with 6 of 7 tickets complete. The next ticket is MP-0107,
+the pinned ACP 2026-04-17 snapshot and conformance boundary.
 
 ## Phase progress
 
@@ -82,6 +82,38 @@ Verification record: `docs/verification/phase-00.md`.
   envelopes, base64url boundaries, the NIST AES-256-GCM vector, and ciphertext/IV/context/key tamper
   failures.
 - Recorded the key lifecycle and private-key storage boundary in ADR-0003.
+- Verified `pnpm check` and `pnpm build` across all workspaces.
+
+### MP-0105 complete
+
+- Added strict version 1 Zod contracts for merchant identity, P-256 public signing keys, manifests,
+  immutable service versions, catalogs, offers, checkout line items, and checkout payloads.
+- Added exact public HTTPS-origin checks, canonical stable identifiers and versions, unique key and
+  service constraints, integer INR prices, timestamp ordering, and calculated checkout totals.
+- Added serializable draft 2020-12 JSON Schema exports with stable MindPay schema IDs.
+- Added frozen reference fixtures for the SignalWorks manifest, ₹299/₹449/₹799 catalog, offer, and
+  checkout.
+- Added 30 tests covering valid fixtures, generated schemas, immutability, unknown fields, private
+  JWK leakage, invalid origins, unstable IDs, price boundaries, and cross-field inconsistencies.
+- Recorded the public merchant contract boundary in ADR-0004.
+- Verified `pnpm check` and `pnpm build` across all workspaces.
+
+### MP-0106 complete
+
+- Added strict signed-object claims requiring canonical issuer and audience URLs, key IDs, UTC
+  issuance and expiry, and nonce or JTI replay protection.
+- Added all four AP2-aligned MindPay mandate contracts, including immutable agent-key bindings,
+  allowlists, integer INR limits, open-mandate hashes, checkout hashes, and closed-mandate links.
+- Added signed merchant reconciliation events, hash-linked audit events, one-time entitlements, and
+  completed, blocked, or failed public evidence graphs with transaction and proof consistency rules.
+- Added draft 2020-12 JSON Schema exports and frozen end-to-end fixtures for the default ₹500
+  per-transaction, ₹1,000 budget, ₹350 approval-threshold SignalWorks flow.
+- Tightened base and prefixed ULID validation so timestamp-overflow encodings fail at every contract
+  boundary.
+- Added 62 contract tests covering common signed claims, missing and mismatched proof bindings, INR
+  amount consistency, reconciliation facts, entitlement identity, audit-chain links, evidence
+  outcomes, generated schemas, strictness, and immutability.
+- Recorded the signed cross-party proof graph in ADR-0005.
 - Verified `pnpm check` and `pnpm build` across all workspaces.
 
 ## Blockers
