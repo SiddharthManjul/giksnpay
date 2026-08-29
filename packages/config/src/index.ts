@@ -1,4 +1,7 @@
 export {
+  type GatewayAuthEnvironment,
+  gatewayAuthEnvironmentSchema,
+  parseGatewayAuthEnvironment,
   parseWorkerEnvironment,
   runtimeEnvironmentSchema,
   type RuntimeEnvironment,
