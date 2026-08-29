@@ -5,13 +5,17 @@ import {
   merchantManifestJsonSchema,
   merchantOfferJsonSchema,
   serviceVersionJsonSchema,
+  signedMerchantCatalogJsonSchema,
+  signedMerchantManifestJsonSchema,
 } from "./merchant-json-schemas";
 
 describe("merchant JSON Schema exports", () => {
   it.each([
     [merchantManifestJsonSchema, "manifest.schema.json"],
+    [signedMerchantManifestJsonSchema, "signed-manifest.schema.json"],
     [serviceVersionJsonSchema, "service-version.schema.json"],
     [merchantCatalogJsonSchema, "catalog.schema.json"],
+    [signedMerchantCatalogJsonSchema, "signed-catalog.schema.json"],
     [merchantOfferJsonSchema, "offer.schema.json"],
     [merchantCheckoutJsonSchema, "checkout.schema.json"],
   ])("exports a strict draft 2020-12 schema for %s", (schema, filename) => {
