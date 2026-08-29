@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@mindpay/crypto": "workspace:*",
     "@mindpay/domain": "workspace:*",
     "zod": "catalog:"
   }
