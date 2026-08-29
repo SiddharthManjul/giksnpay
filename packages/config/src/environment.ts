@@ -29,6 +29,24 @@ const trustedOriginsSchema = z
   .refine((origins) => new Set(origins).size === origins.length, "Trusted origins must be unique")
   .readonly();
 
+const passkeyRpIdSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(1)
+  .max(253)
+  .regex(
+    /^(?:localhost|(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)$/u,
+    "Passkey RP ID must be a canonical DNS name or localhost",
+  );
+
+export const signalWorksKeyEncryptionSecretSchema = z
+  .string()
+  .regex(
+    /^[A-Za-z0-9_-]{43}$/u,
+    "SignalWorks key encryption secret must be 32 bytes of unpadded base64url",
+  );
+
 export const workerEnvironmentSchema = z
   .object({
     ENVIRONMENT: runtimeEnvironmentSchema,
@@ -40,6 +58,7 @@ export const gatewayAuthEnvironmentSchema = z
     BETTER_AUTH_SECRET: z.string().min(32).max(1024),
     BETTER_AUTH_URL: originSchema,
     ENVIRONMENT: runtimeEnvironmentSchema,
+    PASSKEY_RP_ID: passkeyRpIdSchema,
     TRUSTED_ORIGINS: trustedOriginsSchema,
   })
   .strict()
@@ -65,12 +84,35 @@ export const gatewayAuthEnvironmentSchema = z
         path: ["TRUSTED_ORIGINS"],
       });
     }
+
+    for (const [index, origin] of environment.TRUSTED_ORIGINS.entries()) {
+      const hostname = new URL(origin).hostname.toLowerCase();
+      if (
+        hostname !== environment.PASSKEY_RP_ID &&
+        !hostname.endsWith(`.${environment.PASSKEY_RP_ID}`)
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: "Every trusted origin must be within the passkey RP ID",
+          path: ["TRUSTED_ORIGINS", index],
+        });
+      }
+    }
   })
+  .readonly();
+
+export const signalWorksEnvironmentSchema = z
+  .object({
+    ENVIRONMENT: runtimeEnvironmentSchema,
+    SIGNALWORKS_KEY_ENCRYPTION_KEY: signalWorksKeyEncryptionSecretSchema,
+  })
+  .strict()
   .readonly();
 
 export type RuntimeEnvironment = z.infer<typeof runtimeEnvironmentSchema>;
 export type WorkerEnvironment = z.infer<typeof workerEnvironmentSchema>;
 export type GatewayAuthEnvironment = z.infer<typeof gatewayAuthEnvironmentSchema>;
+export type SignalWorksEnvironment = z.infer<typeof signalWorksEnvironmentSchema>;
 
 export function parseWorkerEnvironment(input: unknown): WorkerEnvironment {
   return workerEnvironmentSchema.parse(input);
@@ -78,4 +120,8 @@ export function parseWorkerEnvironment(input: unknown): WorkerEnvironment {
 
 export function parseGatewayAuthEnvironment(input: unknown): GatewayAuthEnvironment {
   return gatewayAuthEnvironmentSchema.parse(input);
+}
+
+export function parseSignalWorksEnvironment(input: unknown): SignalWorksEnvironment {
+  return signalWorksEnvironmentSchema.parse(input);
 }
