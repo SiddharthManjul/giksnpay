@@ -1,8 +1,8 @@
 import { decodeTime, isValid, monotonicFactory, ulid } from "ulidx";
 import { z } from "zod";
 
-const ULID_PATTERN = /^[0-9A-HJKMNP-TV-Z]{26}$/;
-const REQUEST_ID_PATTERN = /^req_[0-9A-HJKMNP-TV-Z]{26}$/;
+const ULID_PATTERN = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/;
+const REQUEST_ID_PATTERN = /^req_[0-7][0-9A-HJKMNP-TV-Z]{25}$/;
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;
 
 export const MAX_ULID_TIMESTAMP_MS = 281_474_976_710_655;
