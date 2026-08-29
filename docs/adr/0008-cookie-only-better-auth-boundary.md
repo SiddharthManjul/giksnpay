@@ -46,8 +46,8 @@ secret binding. Secrets never appear in tracked Wrangler variables.
   authentication boundary rather than reusing browser sign-in responses.
 - Disabling auth logs favors credential safety during foundation work. Later structured auth
   observability must redact credentials before the logger is enabled.
-- Explicit CORS behavior, auth mutation rate limits, and deeper CSRF/session-fixation adversarial
-  coverage remain MP-0205 work.
+- ADR-0011 adds the shared CORS and CSRF boundary plus durable auth mutation rate limits; the Phase
+  2 exit suite verifies those controls together with session-fixation and replay resistance.
 
 ## Alternatives considered
 
@@ -62,6 +62,7 @@ secret binding. Secrets never appear in tracked Wrangler variables.
 
 ## Verification
 
+- `pnpm verify:phase-02`
 - `pnpm --filter @mindpay/gateway test`
 - `pnpm --filter @mindpay/gateway typecheck`
 - `pnpm check`
