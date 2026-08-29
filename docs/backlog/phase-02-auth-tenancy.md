@@ -11,7 +11,7 @@ Users can enter a demo workspace, role and object authorization is enforced, pas
 ### MP-0201: Create Drizzle/D1 schemas, migrations, and integrity constraints
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0106
 - Size: 1-3 engineering days
 
@@ -21,14 +21,14 @@ Implement the Phase 2 identity, tenancy, replay, approval, idempotency, and audi
 
 **Acceptance criteria**
 
-- [ ] Migrations apply to an empty local D1 database and reproduce the same schema.
-- [ ] Unique indexes and append-only audit triggers reject duplicates, updates, and deletes.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Migrations apply to an empty local D1 database and reproduce the same schema.
+- [x] Unique indexes and append-only audit triggers reject duplicates, updates, and deletes.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0202: Integrate Better Auth with D1
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0201
 - Size: 1-3 engineering days
 
@@ -38,9 +38,9 @@ Provide secure account, session, verification, and sign-in flows compatible with
 
 **Acceptance criteria**
 
-- [ ] A user can sign in, refresh, sign out, and cannot reuse an invalidated session.
-- [ ] Auth secrets and session tokens never appear in logs or browser bundles.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] A user can sign in, refresh, sign out, and cannot reuse an invalidated session.
+- [x] Auth secrets and session tokens never appear in logs or browser bundles.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0203: Implement organisations, memberships, and role authorization
 
@@ -132,4 +132,3 @@ Close Phase 2 with migration, RBAC, passkey, BOLA, CSRF, and session security co
 - [ ] Every ticket above is Done.
 - [ ] The exit gate is demonstrated in CI or a reproducible verification record.
 - [ ] Architecture changes are recorded in `docs/adr/`.
-
