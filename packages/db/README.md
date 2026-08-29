@@ -12,6 +12,23 @@ The first migration creates:
 - request-hash-bound idempotency records; and
 - hash-linked `audit_events` protected by D1 update and delete rejection triggers.
 
+The second migration adds membership triggers that reject deleting, demoting, or moving the final
+OWNER of an organization. Application role checks provide a friendly conflict response, while the
+trigger protects the invariant when concurrent requests race.
+
+The third migration adds session- and origin-bound passkey registration challenges plus public
+credential storage. Challenges are hashed at rest and have explicit expiry and consumption fields.
+Credential rows store only public verification material and authenticator metadata; no private-key
+field exists.
+
+The fourth migration adds Better Auth's durable `rate_limit` model. Its unique request key and
+positive counter are updated through Better Auth's atomic database consume path so authentication
+limits remain coherent across concurrent Worker isolates.
+
+The fifth migration adds `demo_workspaces`, keeping 24-hour demo expiry metadata separate from
+permanent organizations. The organization foreign key cascades lifecycle cleanup, while the expiry
+index supports authorization and future cleanup scans.
+
 Timestamps are UTC epoch milliseconds. JSON columns are storage-only values and must still be
 validated by their owning contract before insertion and after retrieval.
 
