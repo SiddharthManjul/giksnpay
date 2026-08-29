@@ -1,6 +1,40 @@
-/**
- * Public entry point for the db package.
- *
- * Domain behavior is introduced only by the implementation phase that owns it.
- */
-export {};
+export { createMindPayDatabase, type MindPayDatabase } from "./client";
+
+export {
+  account,
+  approvalChallenges,
+  approvalChallengePurposes,
+  approvalChallengeStates,
+  auditEvents,
+  idempotencyRecords,
+  idempotencyStates,
+  organizationMembers,
+  organizationRoles,
+  organizations,
+  organizationStatuses,
+  replayNonces,
+  schema,
+  session,
+  user,
+  verification,
+  type Account,
+  type ApprovalChallenge,
+  type AuditEventRecord,
+  type IdempotencyRecord,
+  type NewAccount,
+  type NewApprovalChallenge,
+  type NewAuditEventRecord,
+  type NewIdempotencyRecord,
+  type NewOrganization,
+  type NewOrganizationMember,
+  type NewReplayNonce,
+  type NewSession,
+  type NewUser,
+  type NewVerification,
+  type Organization,
+  type OrganizationMember,
+  type ReplayNonce,
+  type Session,
+  type User,
+  type Verification,
+} from "./schema";
