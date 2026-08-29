@@ -35,6 +35,7 @@ describe("ULID primitives", () => {
     "01arz3ndektsv4rrffq69g5fav",
     "01ARZ3NDEKTSV4RRFFQ69G5FAI",
     "01ARZ3NDEKTSV4RRFFQ69G5FAV0",
+    "Z1ARZ3NDEKTSV4RRFFQ69G5FAV",
   ])("rejects non-canonical ULID %j", (value) => {
     expect(() => parseUlid(value)).toThrow();
   });
