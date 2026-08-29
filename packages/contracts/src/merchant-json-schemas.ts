@@ -5,6 +5,8 @@ import {
   merchantManifestSchema,
   merchantOfferSchema,
   serviceVersionSchema,
+  signedMerchantCatalogSchema,
+  signedMerchantManifestSchema,
 } from "./merchant";
 
 const SCHEMA_BASE_URL = "https://schemas.mindpay.dev/merchant/v1";
@@ -12,6 +14,11 @@ const SCHEMA_BASE_URL = "https://schemas.mindpay.dev/merchant/v1";
 export const merchantManifestJsonSchema = createJsonSchema(
   merchantManifestSchema,
   `${SCHEMA_BASE_URL}/manifest.schema.json`,
+);
+
+export const signedMerchantManifestJsonSchema = createJsonSchema(
+  signedMerchantManifestSchema,
+  `${SCHEMA_BASE_URL}/signed-manifest.schema.json`,
 );
 
 export const serviceVersionJsonSchema = createJsonSchema(
@@ -22,6 +29,11 @@ export const serviceVersionJsonSchema = createJsonSchema(
 export const merchantCatalogJsonSchema = createJsonSchema(
   merchantCatalogSchema,
   `${SCHEMA_BASE_URL}/catalog.schema.json`,
+);
+
+export const signedMerchantCatalogJsonSchema = createJsonSchema(
+  signedMerchantCatalogSchema,
+  `${SCHEMA_BASE_URL}/signed-catalog.schema.json`,
 );
 
 export const merchantOfferJsonSchema = createJsonSchema(
