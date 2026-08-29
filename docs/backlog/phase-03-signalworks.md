@@ -11,7 +11,7 @@ MindPay verifies the signed manifest and catalog, ACP checkout operations are id
 ### MP-0301: Create SignalWorks merchant identity and signing-key lifecycle
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0104, MP-0201
 - Size: 1-3 engineering days
 
@@ -21,14 +21,14 @@ Seed merchant identity and separate manifest, catalog, checkout, and event signi
 
 **Acceptance criteria**
 
-- [ ] Public JWKs expose no private material and revoked keys cannot sign new objects.
-- [ ] Local seed execution is idempotent and produces stable merchant identity.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Public JWKs expose no private material and revoked keys cannot sign new objects.
+- [x] Local seed execution is idempotent and produces stable merchant identity.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0302: Publish the signed well-known manifest
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0301
 - Size: 1-3 engineering days
 
@@ -38,14 +38,14 @@ Serve `/.well-known/mindpay.json` with exact origin, endpoint, rail, expiry, and
 
 **Acceptance criteria**
 
-- [ ] Canonical signature verification succeeds from MindPay contract tests.
-- [ ] Redirects, domain mismatch, expiry, or a one-byte change cause rejection.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Canonical signature verification succeeds from MindPay contract tests.
+- [x] Redirects, domain mismatch, expiry, or a one-byte change cause rejection.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0303: Publish the signed three-service catalog
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0301, MP-0105
 - Size: 1-3 engineering days
 
@@ -55,9 +55,9 @@ Expose immutable versions for ₹299, ₹449, and ₹799 SignalWorks services wi
 
 **Acceptance criteria**
 
-- [ ] Prices are integer paise and all service IDs remain stable across refreshes.
-- [ ] Changing a published version fails at the persistence boundary.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Prices are integer paise and all service IDs remain stable across refreshes.
+- [x] Changing a published version fails at the persistence boundary.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0304: Implement the ACP checkout state machine
 
@@ -132,4 +132,3 @@ Provide the repeatable SignalWorks seed command and close the merchant contract 
 - [ ] Every ticket above is Done.
 - [ ] The exit gate is demonstrated in CI or a reproducible verification record.
 - [ ] Architecture changes are recorded in `docs/adr/`.
-
