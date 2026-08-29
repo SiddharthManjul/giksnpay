@@ -5,10 +5,67 @@ export {
 } from "./health";
 
 export {
+  type DemoWorkspace,
+  demoWorkspaceSchema,
+  type ProvisionDemoWorkspaceRequest,
+  provisionDemoWorkspaceRequestSchema,
+  type ProvisionDemoWorkspaceResponse,
+  provisionDemoWorkspaceResponseSchema,
+} from "./demo-workspaces";
+
+export {
+  type ApiErrorCode,
+  type ApiErrorResponse,
+  apiErrorCodeSchema,
+  apiErrorResponseSchema,
+  createOrganizationAccess,
+  type CurrentOrganizationResponse,
+  currentOrganizationResponseSchema,
+  type MeResponse,
+  meResponseSchema,
+  type OrganizationAccess,
+  organizationAccessSchema,
+  type OrganizationMember,
+  organizationMemberSchema,
+  type OrganizationMembersResponse,
+  organizationMembersResponseSchema,
+  type OrganizationProfile,
+  organizationProfileSchema,
+  type OrganizationStatus,
+  organizationStatusSchema,
+  type UpdateOrganizationMemberRoleRequest,
+  updateOrganizationMemberRoleRequestSchema,
+  type UpdateOrganizationRequest,
+  updateOrganizationRequestSchema,
+} from "./identity";
+
+export {
+  type AuthenticatorTransport,
+  authenticatorTransportSchema,
+  deletePasskeyResponseSchema,
+  type PasskeyCredential,
+  passkeyCredentialDeviceTypeSchema,
+  passkeyCredentialIdSchema,
+  passkeyCredentialSchema,
+  type PasskeyCredentialsResponse,
+  passkeyCredentialsResponseSchema,
+  passkeyMutationResponseSchema,
+  passkeyRegistrationChallengeIdSchema,
+  passkeyRegistrationOptionsResponseSchema,
+  type PasskeyRegistrationResponseJson,
+  passkeyRegistrationResponseJsonSchema,
+  type UpdatePasskeyRequest,
+  updatePasskeyRequestSchema,
+  type VerifyPasskeyRegistrationRequest,
+  verifyPasskeyRegistrationRequestSchema,
+} from "./passkeys";
+
+export {
   catalogIdSchema,
   checkoutFulfilmentTermsSchema,
   checkoutLineItemSchema,
   checkoutSessionIdSchema,
+  type Es256CanonicalSignature,
   type CheckoutLineItem,
   type Es256PublicJwk,
   es256PublicJwkSchema,
@@ -29,11 +86,16 @@ export {
   merchantOfferSchema,
   type MerchantSigningKey,
   merchantSigningKeySchema,
+  type MerchantSigningPurpose,
   merchantSigningPurposeSchema,
   offerIdSchema,
   offerNonceSchema,
   paymentRailSchema,
   semanticVersionSchema,
+  type SignedMerchantCatalog,
+  signedMerchantCatalogSchema,
+  type SignedMerchantManifest,
+  signedMerchantManifestSchema,
   type ServiceVersion,
   serviceAvailabilitySchema,
   serviceFulfilmentSchema,
@@ -48,7 +110,16 @@ export {
   merchantManifestJsonSchema,
   merchantOfferJsonSchema,
   serviceVersionJsonSchema,
+  signedMerchantCatalogJsonSchema,
+  signedMerchantManifestJsonSchema,
 } from "./merchant-json-schemas";
+
+export {
+  type MerchantManifestPublicationInput,
+  type MerchantManifestVerificationFailureReason,
+  type MerchantManifestVerificationResult,
+  verifyMerchantManifestPublication,
+} from "./merchant-manifest-verification";
 
 export {
   agentIdSchema,
