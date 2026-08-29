@@ -31,5 +31,9 @@ pnpm build
 pnpm test:e2e
 ```
 
+SignalWorks has a separate D1 database and key-encryption secret. See
+[`apps/merchant-signalworks/README.md`](./apps/merchant-signalworks/README.md) before running its
+idempotent local seed.
+
 No production or test secrets are committed. Copy the relevant `.env.example` or `.dev.vars.example`
 file when a later implementation phase introduces credentials.
