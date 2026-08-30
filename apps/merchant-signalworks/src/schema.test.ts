@@ -1,7 +1,11 @@
 import { getTableConfig } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
 import {
+  signalWorksCheckoutSessions,
+  signalWorksIdempotencyRecords,
+  signalWorksMachineCredentials,
   signalWorksMerchantIdentity,
+  signalWorksOutboundEvents,
   signalWorksServiceVersions,
   signalWorksSigningKeys,
 } from "./schema";
@@ -11,6 +15,31 @@ describe("SignalWorks identity schema", () => {
     expect(getTableConfig(signalWorksMerchantIdentity).name).toBe("merchant_identity");
     expect(getTableConfig(signalWorksSigningKeys).name).toBe("merchant_signing_keys");
     expect(getTableConfig(signalWorksServiceVersions).name).toBe("merchant_service_versions");
+    expect(getTableConfig(signalWorksMachineCredentials).name).toBe("merchant_machine_credentials");
+    expect(getTableConfig(signalWorksCheckoutSessions).name).toBe("merchant_checkout_sessions");
+    expect(getTableConfig(signalWorksIdempotencyRecords).name).toBe("merchant_idempotency_records");
+    expect(getTableConfig(signalWorksOutboundEvents).name).toBe("merchant_outbound_events");
+  });
+
+  it("declares durable ACP state, machine auth, idempotency, and outbox indexes", () => {
+    expect(
+      getTableConfig(signalWorksMachineCredentials).indexes.map((index) => index.config.name),
+    ).toEqual([
+      "merchant_machine_credentials_token_hash_uq",
+      "merchant_machine_credentials_lifecycle_idx",
+    ]);
+    expect(
+      getTableConfig(signalWorksCheckoutSessions).indexes.map((index) => index.config.name),
+    ).toEqual([
+      "merchant_checkout_sessions_credential_idx",
+      "merchant_checkout_sessions_status_idx",
+    ]);
+    expect(
+      getTableConfig(signalWorksIdempotencyRecords).indexes.map((index) => index.config.name),
+    ).toEqual(["merchant_idempotency_records_expiry_idx"]);
+    expect(
+      getTableConfig(signalWorksOutboundEvents).indexes.map((index) => index.config.name),
+    ).toEqual(["merchant_outbound_events_nonce_uq", "merchant_outbound_events_checkout_idx"]);
   });
 
   it("declares purpose, public-key, encrypted-private-key, and lifecycle checks", () => {
