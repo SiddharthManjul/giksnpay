@@ -18,7 +18,9 @@
     "test": "turbo run test",
     "test:e2e": "playwright test",
     "typecheck": "turbo run typecheck",
-    "verify:phase-02": "node ./scripts/verify-phase-02.mjs"
+    "verify:phase-02": "node ./scripts/verify-phase-02.mjs",
+    "verify:phase-03": "node ./scripts/verify-phase-03.mjs",
+    "verify:phase-04": "node ./scripts/verify-phase-04.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
