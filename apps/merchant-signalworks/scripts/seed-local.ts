@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { getPlatformProxy } from "wrangler";
 import type { MerchantBindings } from "../src/index";
 import { importSignalWorksKeyEncryptionKey, seedSignalWorksIdentity } from "../src/identity";
+import { seedSignalWorksMachineCredential } from "../src/machine-auth";
 import { seedSignalWorksServiceVersions } from "../src/services";
 
 const applicationRoot = fileURLToPath(new URL("../", import.meta.url));
@@ -33,7 +34,13 @@ try {
   );
   const publicIdentity = await seedSignalWorksIdentity(platform.env.DB, keyEncryptionKey);
   const serviceVersions = await seedSignalWorksServiceVersions(platform.env.DB);
-  process.stdout.write(`${JSON.stringify({ publicIdentity, serviceVersions }, null, 2)}\n`);
+  const machineCredential = await seedSignalWorksMachineCredential(
+    platform.env.DB,
+    process.env.SIGNALWORKS_MACHINE_AUTH_TOKEN ?? platform.env.SIGNALWORKS_MACHINE_AUTH_TOKEN,
+  );
+  process.stdout.write(
+    `${JSON.stringify({ machineCredential, publicIdentity, serviceVersions }, null, 2)}\n`,
+  );
 } finally {
   await platform.dispose();
 }
