@@ -122,6 +122,49 @@ export {
 } from "./merchant-manifest-verification";
 
 export {
+  type MerchantCatalogPublicationInput,
+  type MerchantCatalogVerificationFailureReason,
+  type MerchantCatalogVerificationResult,
+  verifyMerchantCatalogPublication,
+} from "./merchant-catalog-verification";
+
+export {
+  type MarketplaceSearchQuery,
+  marketplaceSearchQuerySchema,
+  type MarketplaceService,
+  marketplaceServiceResponseSchema,
+  marketplaceServiceSchema,
+  type MarketplaceServicesResponse,
+  marketplaceServicesResponseSchema,
+  marketplaceCursorSchema,
+  type MerchantAdministrationResponse,
+  merchantAdministrationResponseSchema,
+  merchantOperationalStatusSchema,
+  merchantRiskTierSchema,
+  type MerchantSubmissionRequest,
+  merchantSubmissionRequestSchema,
+  type MerchantTrustResponse,
+  merchantTrustResponseSchema,
+  type MerchantVerificationStatus,
+  merchantVerificationStatusSchema,
+  merchantVerificationTierSchema,
+} from "./marketplace";
+
+export {
+  type MerchantOrderEventReplayStore,
+  type MerchantOrderEventVerificationFailureReason,
+  type MerchantOrderEventVerificationInput,
+  type MerchantOrderEventVerificationResult,
+  type MerchantOrderLifecycleEvent,
+  merchantOrderEventStatusSchema,
+  merchantOrderEventTypeSchema,
+  merchantOrderLifecycleEventSchema,
+  type SignedMerchantOrderLifecycleEvent,
+  signedMerchantOrderLifecycleEventSchema,
+  verifyMerchantOrderEvent,
+} from "./merchant-order-events";
+
+export {
   agentIdSchema,
   type AuditActor,
   auditActorSchema,
