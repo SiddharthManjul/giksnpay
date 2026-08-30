@@ -5,6 +5,7 @@ const bindings = {
   DB: {} as D1Database,
   ENVIRONMENT: "test",
   SIGNALWORKS_KEY_ENCRYPTION_KEY: "A".repeat(43),
+  SIGNALWORKS_MACHINE_AUTH_TOKEN: "mindpay_test_machine_token_0000000001",
 };
 
 describe("SignalWorks health", () => {
