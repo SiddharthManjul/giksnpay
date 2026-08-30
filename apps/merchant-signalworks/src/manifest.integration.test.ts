@@ -37,6 +37,7 @@ describe("SignalWorks well-known manifest", () => {
       DB: testDatabase.database,
       ENVIRONMENT: "test",
       SIGNALWORKS_KEY_ENCRYPTION_KEY: KEY_ENCRYPTION_SECRET,
+      SIGNALWORKS_MACHINE_AUTH_TOKEN: "mindpay_test_machine_token_0000000001",
     };
 
     const response = await app.request(SIGNALWORKS_MANIFEST_URL, undefined, bindings);
@@ -98,6 +99,7 @@ describe("SignalWorks well-known manifest", () => {
       DB: {} as D1Database,
       ENVIRONMENT: "test",
       SIGNALWORKS_KEY_ENCRYPTION_KEY: KEY_ENCRYPTION_SECRET,
+      SIGNALWORKS_MACHINE_AUTH_TOKEN: "mindpay_test_machine_token_0000000001",
     };
 
     for (const path of ["/.well-known/mindpay.json/", "/mindpay.json", "/.well-known/mindpay"]) {
