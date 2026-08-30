@@ -19,7 +19,13 @@ const organization = {
 describe("identity and organization API contracts", () => {
   it("creates exact capabilities from the assigned role", () => {
     expect(createOrganizationAccess("BUILDER")).toEqual({
-      capabilities: ["organization:read", "member:read", "agent:read", "agent:write"],
+      capabilities: [
+        "organization:read",
+        "member:read",
+        "agent:read",
+        "agent:write",
+        "merchant:submit",
+      ],
       role: "BUILDER",
     });
   });
@@ -44,7 +50,13 @@ describe("identity and organization API contracts", () => {
       }),
     ).toEqual({
       access: {
-        capabilities: ["organization:read", "member:read", "agent:read", "approval:review"],
+        capabilities: [
+          "organization:read",
+          "member:read",
+          "agent:read",
+          "approval:review",
+          "merchant:review",
+        ],
         role: "REVIEWER",
       },
       organization,
