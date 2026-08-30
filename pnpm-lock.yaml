@@ -204,6 +204,12 @@ importers:
       '@mindpay/crypto':
         specifier: workspace:*
         version: link:../../packages/crypto
+      '@mindpay/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@mindpay/protocol-acp':
+        specifier: workspace:*
+        version: link:../../packages/protocol-acp
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@cloudflare/workers-types@5.20260828.1)(kysely@0.29.5)
