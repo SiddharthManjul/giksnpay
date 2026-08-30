@@ -18,6 +18,8 @@ describe("organization authorization", () => {
       "agent:read",
       "agent:write",
       "approval:review",
+      "merchant:submit",
+      "merchant:review",
     ]);
   });
 
@@ -28,6 +30,9 @@ describe("organization authorization", () => {
     ["BUILDER", "approval:review", false],
     ["REVIEWER", "approval:review", true],
     ["REVIEWER", "agent:write", false],
+    ["BUILDER", "merchant:submit", true],
+    ["BUILDER", "merchant:review", false],
+    ["REVIEWER", "merchant:review", true],
     ["VIEWER", "agent:read", true],
     ["VIEWER", "organization:update", false],
   ] as const)("evaluates %s access to %s", (role, capability, expected) => {
