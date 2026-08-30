@@ -33,6 +33,7 @@ describe("SignalWorks signed catalog feed", () => {
       DB: testDatabase.database,
       ENVIRONMENT: "test",
       SIGNALWORKS_KEY_ENCRYPTION_KEY: KEY_ENCRYPTION_SECRET,
+      SIGNALWORKS_MACHINE_AUTH_TOKEN: "mindpay_test_machine_token_0000000001",
     };
     const app = createMerchantApp({
       createCatalogNonce: () => CATALOG_NONCE,
@@ -126,6 +127,7 @@ describe("SignalWorks signed catalog feed", () => {
       DB: testDatabase.database,
       ENVIRONMENT: "test",
       SIGNALWORKS_KEY_ENCRYPTION_KEY: KEY_ENCRYPTION_SECRET,
+      SIGNALWORKS_MACHINE_AUTH_TOKEN: "mindpay_test_machine_token_0000000001",
     };
     const firstApp = createMerchantApp({
       createCatalogNonce: () => CATALOG_NONCE,
