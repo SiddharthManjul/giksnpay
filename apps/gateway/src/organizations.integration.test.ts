@@ -102,7 +102,13 @@ describe("Gateway organization authorization", () => {
       organizations: [
         {
           access: {
-            capabilities: ["organization:read", "member:read", "agent:read", "agent:write"],
+            capabilities: [
+              "organization:read",
+              "member:read",
+              "agent:read",
+              "agent:write",
+              "merchant:submit",
+            ],
             role: "BUILDER",
           },
           organization: { id: PRIMARY_ORGANIZATION_ID },
