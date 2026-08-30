@@ -16,6 +16,19 @@ export const passkeyCredentialDeviceTypes = ["singleDevice", "multiDevice"] as c
 export const approvalChallengePurposes = ["MANDATE_ACTIVATION", "TRANSACTION_STEP_UP"] as const;
 export const approvalChallengeStates = ["PENDING", "CONSUMED", "EXPIRED", "CANCELLED"] as const;
 export const idempotencyStates = ["PENDING", "COMPLETED", "FAILED"] as const;
+export const merchantOperationalStatuses = ["ACTIVE", "SUSPENDED", "REVOKED"] as const;
+export const merchantVerificationStatuses = [
+  "SUBMITTED",
+  "DOMAIN_VERIFIED",
+  "KEY_VERIFIED",
+  "CATALOG_VALIDATED",
+  "PAYMENT_CONFIGURATION_VERIFIED",
+  "APPROVED",
+  "REVIEW_REQUIRED",
+  "QUARANTINED",
+] as const;
+export const merchantRiskTiers = ["LOW", "MEDIUM", "HIGH"] as const;
+export const merchantVerificationTiers = ["NONE", "TEST_VERIFIED"] as const;
 
 const sha256Check = (column: { getSQL(): ReturnType<typeof sql> }) =>
   sql`length(${column}) = 64 and ${column} not glob '*[^0-9a-f]*'`;
@@ -466,18 +479,336 @@ export const auditEvents = sqliteTable(
   ],
 );
 
+export const merchants = sqliteTable(
+  "merchants",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    legalName: text("legal_name").notNull(),
+    domain: text("domain").notNull(),
+    status: text("status", { enum: merchantOperationalStatuses }).notNull().default("ACTIVE"),
+    verificationStatus: text("verification_status", { enum: merchantVerificationStatuses })
+      .notNull()
+      .default("SUBMITTED"),
+    riskTier: text("risk_tier", { enum: merchantRiskTiers }).notNull().default("LOW"),
+    verificationTier: text("verification_tier", { enum: merchantVerificationTiers })
+      .notNull()
+      .default("NONE"),
+    currentManifestId: text("current_manifest_id"),
+    currentCatalogId: text("current_catalog_id"),
+    lastAdminEventId: text("last_admin_event_id").notNull(),
+    lastVerificationAt: integer("last_verification_at", { mode: "timestamp_ms" }),
+    verificationExpiresAt: integer("verification_expires_at", { mode: "timestamp_ms" }),
+    quarantinedAt: integer("quarantined_at", { mode: "timestamp_ms" }),
+    revision: integer("revision").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("merchants_domain_uq").on(sql`lower(${table.domain})`),
+    uniqueIndex("merchants_slug_uq").on(sql`lower(${table.slug})`),
+    index("merchants_discovery_idx").on(table.status, table.verificationStatus),
+    check(
+      "merchants_id_valid",
+      sql`${table.id} glob 'merchant_*' and length(${table.id}) between 12 and 96`,
+    ),
+    check("merchants_name_valid", sql`length(trim(${table.name})) between 2 and 120`),
+    check("merchants_legal_name_valid", sql`length(trim(${table.legalName})) between 2 and 160`),
+    check(
+      "merchants_domain_valid",
+      sql`${table.domain} = lower(${table.domain}) and instr(${table.domain}, '.') > 0`,
+    ),
+    check("merchants_status_valid", sql`${table.status} in ('ACTIVE', 'SUSPENDED', 'REVOKED')`),
+    check(
+      "merchants_verification_status_valid",
+      sql`${table.verificationStatus} in ('SUBMITTED', 'DOMAIN_VERIFIED', 'KEY_VERIFIED', 'CATALOG_VALIDATED', 'PAYMENT_CONFIGURATION_VERIFIED', 'APPROVED', 'REVIEW_REQUIRED', 'QUARANTINED')`,
+    ),
+    check("merchants_risk_tier_valid", sql`${table.riskTier} in ('LOW', 'MEDIUM', 'HIGH')`),
+    check(
+      "merchants_verification_tier_valid",
+      sql`${table.verificationTier} in ('NONE', 'TEST_VERIFIED')`,
+    ),
+    check("merchants_revision_valid", sql`${table.revision} >= 0`),
+    check(
+      "merchants_verification_expiry_valid",
+      sql`${table.verificationExpiresAt} is null or (${table.lastVerificationAt} is not null and ${table.verificationExpiresAt} > ${table.lastVerificationAt})`,
+    ),
+    check("merchants_updated_after_created", sql`${table.updatedAt} >= ${table.createdAt}`),
+  ],
+);
+
+export const merchantKeys = sqliteTable(
+  "merchant_keys",
+  {
+    id: text("id").primaryKey(),
+    merchantId: text("merchant_id")
+      .notNull()
+      .references(() => merchants.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    kid: text("kid").notNull(),
+    purpose: text("purpose", { enum: ["manifest", "catalog", "checkout", "event"] }).notNull(),
+    publicJwk: text("public_jwk", { mode: "json" })
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    validFrom: integer("valid_from", { mode: "timestamp_ms" }).notNull(),
+    validUntil: integer("valid_until", { mode: "timestamp_ms" }),
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("merchant_keys_identity_uq").on(
+      table.merchantId,
+      table.kid,
+      table.purpose,
+      table.fingerprint,
+    ),
+    index("merchant_keys_active_idx").on(table.merchantId, table.purpose, table.revokedAt),
+    check("merchant_keys_fingerprint_valid", sha256Check(table.fingerprint)),
+    check("merchant_keys_public_jwk_valid", sql`json_valid(${table.publicJwk})`),
+    check(
+      "merchant_keys_purpose_valid",
+      sql`${table.purpose} in ('manifest', 'catalog', 'checkout', 'event')`,
+    ),
+  ],
+);
+
+export const merchantManifests = sqliteTable(
+  "merchant_manifests",
+  {
+    id: text("id").primaryKey(),
+    merchantId: text("merchant_id")
+      .notNull()
+      .references(() => merchants.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    schemaVersion: text("schema_version").notNull(),
+    manifestJson: text("manifest_json", { mode: "json" })
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    manifestHash: text("manifest_hash").notNull(),
+    signature: text("signature", { mode: "json" })
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    verifiedAt: integer("verified_at", { mode: "timestamp_ms" }).notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("merchant_manifests_hash_uq").on(table.merchantId, table.manifestHash),
+    check("merchant_manifests_hash_valid", sha256Check(table.manifestHash)),
+    check(
+      "merchant_manifests_json_valid",
+      sql`json_valid(${table.manifestJson}) and json_valid(${table.signature})`,
+    ),
+    check("merchant_manifests_expiry_valid", sql`${table.expiresAt} > ${table.verifiedAt}`),
+  ],
+);
+
+export const merchantVerifications = sqliteTable(
+  "merchant_verifications",
+  {
+    id: text("id").primaryKey(),
+    merchantId: text("merchant_id")
+      .notNull()
+      .references(() => merchants.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    runId: text("run_id").notNull(),
+    checkType: text("check_type").notNull(),
+    status: text("status", { enum: ["PASS", "FAIL"] }).notNull(),
+    reason: text("reason"),
+    evidenceJson: text("evidence_json", { mode: "json" })
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    checkedAt: integer("checked_at", { mode: "timestamp_ms" }).notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("merchant_verifications_run_check_uq").on(table.runId, table.checkType),
+    index("merchant_verifications_merchant_checked_idx").on(table.merchantId, table.checkedAt),
+    check("merchant_verifications_status_valid", sql`${table.status} in ('PASS', 'FAIL')`),
+    check("merchant_verifications_evidence_valid", sql`json_valid(${table.evidenceJson})`),
+    check(
+      "merchant_verifications_result_valid",
+      sql`(${table.status} = 'PASS' and ${table.reason} is null) or (${table.status} = 'FAIL' and ${table.reason} is not null)`,
+    ),
+    check("merchant_verifications_expiry_valid", sql`${table.expiresAt} > ${table.checkedAt}`),
+  ],
+);
+
+export const merchantCatalogs = sqliteTable(
+  "merchant_catalogs",
+  {
+    id: text("id").primaryKey(),
+    merchantId: text("merchant_id")
+      .notNull()
+      .references(() => merchants.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    version: text("version").notNull(),
+    catalogHash: text("catalog_hash").notNull(),
+    catalogJson: text("catalog_json", { mode: "json" })
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    signature: text("signature", { mode: "json" })
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    verifiedAt: integer("verified_at", { mode: "timestamp_ms" }).notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("merchant_catalogs_version_hash_uq").on(
+      table.merchantId,
+      table.version,
+      table.catalogHash,
+    ),
+    index("merchant_catalogs_merchant_verified_idx").on(table.merchantId, table.verifiedAt),
+    check("merchant_catalogs_hash_valid", sha256Check(table.catalogHash)),
+    check(
+      "merchant_catalogs_json_valid",
+      sql`json_valid(${table.catalogJson}) and json_valid(${table.signature})`,
+    ),
+    check("merchant_catalogs_expiry_valid", sql`${table.expiresAt} > ${table.verifiedAt}`),
+  ],
+);
+
+export const services = sqliteTable(
+  "services",
+  {
+    id: text("id").primaryKey(),
+    merchantId: text("merchant_id")
+      .notNull()
+      .references(() => merchants.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    externalId: text("external_id").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull(),
+    category: text("category").notNull(),
+    status: text("status", { enum: ["ACTIVE", "RETIRED"] })
+      .notNull()
+      .default("ACTIVE"),
+    currentVersionId: text("current_version_id"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("services_merchant_external_uq").on(table.merchantId, table.externalId),
+    index("services_discovery_idx").on(table.status, table.category),
+    check("services_status_valid", sql`${table.status} in ('ACTIVE', 'RETIRED')`),
+    check("services_updated_after_created", sql`${table.updatedAt} >= ${table.createdAt}`),
+  ],
+);
+
+export const serviceVersions = sqliteTable(
+  "service_versions",
+  {
+    id: text("id").primaryKey(),
+    serviceId: text("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    version: text("version").notNull(),
+    priceSubunits: integer("price_subunits").notNull(),
+    currency: text("currency", { enum: ["INR"] }).notNull(),
+    availability: text("availability", { enum: ["available", "paused", "unavailable"] }).notNull(),
+    fulfilmentType: text("fulfilment_type", { enum: ["mcp", "rest"] }).notNull(),
+    fulfilmentToolId: text("fulfilment_tool_id").notNull(),
+    estimatedDeliverySeconds: integer("estimated_delivery_seconds").notNull(),
+    privacyUrl: text("privacy_url").notNull(),
+    termsUrl: text("terms_url").notNull(),
+    catalogHash: text("catalog_hash").notNull(),
+    contentHash: text("content_hash").notNull(),
+    publishedAt: integer("published_at", { mode: "timestamp_ms" }).notNull(),
+    verifiedAt: integer("verified_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("service_versions_identity_uq").on(table.serviceId, table.version),
+    index("service_versions_marketplace_idx").on(table.availability, table.priceSubunits),
+    check(
+      "service_versions_price_valid",
+      sql`typeof(${table.priceSubunits}) = 'integer' and ${table.priceSubunits} >= 0`,
+    ),
+    check("service_versions_currency_valid", sql`${table.currency} = 'INR'`),
+    check(
+      "service_versions_availability_valid",
+      sql`${table.availability} in ('available', 'paused', 'unavailable')`,
+    ),
+    check(
+      "service_versions_fulfilment_valid",
+      sql`${table.fulfilmentType} in ('mcp', 'rest') and ${table.estimatedDeliverySeconds} between 1 and 86400`,
+    ),
+    check("service_versions_catalog_hash_valid", sha256Check(table.catalogHash)),
+    check("service_versions_content_hash_valid", sha256Check(table.contentHash)),
+  ],
+);
+
+export const merchantAdminEvents = sqliteTable(
+  "merchant_admin_events",
+  {
+    id: text("id").primaryKey(),
+    merchantId: text("merchant_id")
+      .notNull()
+      .references(() => merchants.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    actorId: text("actor_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    action: text("action").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    requestHash: text("request_hash").notNull(),
+    previousVerificationStatus: text("previous_verification_status"),
+    nextVerificationStatus: text("next_verification_status").notNull(),
+    detailsJson: text("details_json", { mode: "json" })
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("merchant_admin_events_idempotency_uq").on(
+      table.organizationId,
+      table.actorId,
+      table.action,
+      table.idempotencyKey,
+    ),
+    index("merchant_admin_events_merchant_time_idx").on(table.merchantId, table.occurredAt),
+    check("merchant_admin_events_request_hash_valid", sha256Check(table.requestHash)),
+    check("merchant_admin_events_details_valid", sql`json_valid(${table.detailsJson})`),
+  ],
+);
+
+export const marketplaceCacheVersions = sqliteTable(
+  "marketplace_cache_versions",
+  {
+    namespace: text("namespace").primaryKey(),
+    generation: text("generation").notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    check("marketplace_cache_versions_namespace_valid", sql`${table.namespace} = 'services'`),
+    check("marketplace_cache_versions_generation_valid", sha256Check(table.generation)),
+  ],
+);
+
 export const schema = {
   account,
   approvalChallenges,
   auditEvents,
   demoWorkspaces,
   idempotencyRecords,
+  marketplaceCacheVersions,
+  merchantAdminEvents,
+  merchantCatalogs,
+  merchantKeys,
+  merchantManifests,
+  merchants,
+  merchantVerifications,
   organizationMembers,
   organizations,
   passkeyCredentials,
   passkeyRegistrationChallenges,
   rateLimit,
   replayNonces,
+  services,
+  serviceVersions,
   session,
   user,
   verification,
@@ -511,3 +842,21 @@ export type IdempotencyRecord = typeof idempotencyRecords.$inferSelect;
 export type NewIdempotencyRecord = typeof idempotencyRecords.$inferInsert;
 export type AuditEventRecord = typeof auditEvents.$inferSelect;
 export type NewAuditEventRecord = typeof auditEvents.$inferInsert;
+export type Merchant = typeof merchants.$inferSelect;
+export type NewMerchant = typeof merchants.$inferInsert;
+export type MerchantKey = typeof merchantKeys.$inferSelect;
+export type NewMerchantKey = typeof merchantKeys.$inferInsert;
+export type MerchantManifestRecord = typeof merchantManifests.$inferSelect;
+export type NewMerchantManifestRecord = typeof merchantManifests.$inferInsert;
+export type MerchantVerificationRecord = typeof merchantVerifications.$inferSelect;
+export type NewMerchantVerificationRecord = typeof merchantVerifications.$inferInsert;
+export type MerchantCatalogRecord = typeof merchantCatalogs.$inferSelect;
+export type NewMerchantCatalogRecord = typeof merchantCatalogs.$inferInsert;
+export type Service = typeof services.$inferSelect;
+export type NewService = typeof services.$inferInsert;
+export type ServiceVersionRecord = typeof serviceVersions.$inferSelect;
+export type NewServiceVersionRecord = typeof serviceVersions.$inferInsert;
+export type MerchantAdminEvent = typeof merchantAdminEvents.$inferSelect;
+export type NewMerchantAdminEvent = typeof merchantAdminEvents.$inferInsert;
+export type MarketplaceCacheVersion = typeof marketplaceCacheVersions.$inferSelect;
+export type NewMarketplaceCacheVersion = typeof marketplaceCacheVersions.$inferInsert;
