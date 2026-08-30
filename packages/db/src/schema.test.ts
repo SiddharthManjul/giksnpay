@@ -7,6 +7,17 @@ import {
   auditEvents,
   demoWorkspaces,
   idempotencyStates,
+  marketplaceCacheVersions,
+  merchantAdminEvents,
+  merchantCatalogs,
+  merchantKeys,
+  merchantManifests,
+  merchantOperationalStatuses,
+  merchantRiskTiers,
+  merchants,
+  merchantVerificationStatuses,
+  merchantVerificationTiers,
+  merchantVerifications,
   organizationRoles,
   organizationStatuses,
   passkeyCredentialDeviceTypes,
@@ -14,13 +25,15 @@ import {
   passkeyRegistrationChallenges,
   rateLimit,
   schema,
+  services,
+  serviceVersions,
   session,
   user,
   verification,
 } from "./schema";
 
 describe("MindPay D1 schema", () => {
-  it("exports the complete Phase 2 foundation table set", () => {
+  it("exports the complete foundation and marketplace table set", () => {
     expect(
       Object.values(schema)
         .map((table) => getTableConfig(table).name)
@@ -31,12 +44,21 @@ describe("MindPay D1 schema", () => {
       "audit_events",
       "demo_workspaces",
       "idempotency_records",
+      "marketplace_cache_versions",
+      "merchant_admin_events",
+      "merchant_catalogs",
+      "merchant_keys",
+      "merchant_manifests",
+      "merchant_verifications",
+      "merchants",
       "organization_members",
       "organizations",
       "passkey_credentials",
       "passkey_registration_challenges",
       "rate_limit",
       "replay_nonces",
+      "service_versions",
+      "services",
       "session",
       "user",
       "verification",
@@ -135,6 +157,35 @@ describe("MindPay D1 schema", () => {
     expect(approvalChallengePurposes).toEqual(["MANDATE_ACTIVATION", "TRANSACTION_STEP_UP"]);
     expect(approvalChallengeStates).toEqual(["PENDING", "CONSUMED", "EXPIRED", "CANCELLED"]);
     expect(idempotencyStates).toEqual(["PENDING", "COMPLETED", "FAILED"]);
+    expect(merchantOperationalStatuses).toEqual(["ACTIVE", "SUSPENDED", "REVOKED"]);
+    expect(merchantVerificationStatuses).toEqual([
+      "SUBMITTED",
+      "DOMAIN_VERIFIED",
+      "KEY_VERIFIED",
+      "CATALOG_VALIDATED",
+      "PAYMENT_CONFIGURATION_VERIFIED",
+      "APPROVED",
+      "REVIEW_REQUIRED",
+      "QUARANTINED",
+    ]);
+    expect(merchantRiskTiers).toEqual(["LOW", "MEDIUM", "HIGH"]);
+    expect(merchantVerificationTiers).toEqual(["NONE", "TEST_VERIFIED"]);
+  });
+
+  it("models immutable verified publications, checks, service versions, and admin events", () => {
+    expect(columnNames(merchants)).toContain("verification_status");
+    expect(columnNames(merchantKeys)).not.toContain("private_jwk");
+    expect(columnNames(merchantManifests)).toContain("manifest_hash");
+    expect(columnNames(merchantCatalogs)).toContain("catalog_hash");
+    expect(columnNames(merchantVerifications)).toContain("evidence_json");
+    expect(columnNames(services)).toContain("current_version_id");
+    expect(columnNames(serviceVersions)).toContain("content_hash");
+    expect(columnNames(merchantAdminEvents)).toContain("request_hash");
+    expect(columnNames(marketplaceCacheVersions)).toEqual([
+      "namespace",
+      "generation",
+      "updated_at",
+    ]);
   });
 
   it("declares audit chain checks and uniqueness at the schema boundary", () => {
