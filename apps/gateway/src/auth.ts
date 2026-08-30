@@ -11,6 +11,8 @@ export interface GatewayAuthBindings {
   BETTER_AUTH_URL: string;
   DB: D1Database;
   ENVIRONMENT: string;
+  MARKETPLACE_CACHE?: KVNamespace;
+  MINDPAY_API_AUDIENCE?: string;
   PASSKEY_RP_ID: string;
   TRUSTED_ORIGINS: string;
 }
