@@ -4,7 +4,7 @@ SignalWorks is a separately deployed reference merchant with its own Worker and 
 stable identity is `merchant_signalworks`. Manifest, catalog, checkout, and event signing use four
 different ES256 keys so compromise or rotation of one purpose does not grant another purpose.
 
-## Local key-encryption secret
+## Local secrets
 
 Private signing JWKs are encrypted in D1 with A256GCM. Generate a canonical 32-byte local wrapping
 secret:
@@ -22,6 +22,11 @@ Production and preview values must be provisioned as the
 `SIGNALWORKS_KEY_ENCRYPTION_KEY` Worker secret. They must never be stored in `wrangler.jsonc`, source
 control, logs, public manifests, or browser responses.
 
+Also generate a separate high-entropy `SIGNALWORKS_MACHINE_AUTH_TOKEN` with at least 32 printable
+ASCII characters. The seed stores only its SHA-256 digest in D1. MindPay Gateway supplies the
+plaintext as a bearer token; it is never returned or written to checkout, event, or idempotency
+records.
+
 ## Local seed
 
 From the repository root:
@@ -32,9 +37,10 @@ pnpm --filter @mindpay/merchant-signalworks seed:local
 
 The command applies ordered migrations to Wrangler's persistent local SignalWorks D1 database,
 inserts the stable merchant if missing, generates any missing initial purpose keys, and seeds the
-three immutable service versions. Repeating the command returns the same creation timestamp,
-public JWKs, service IDs, versions, prices, fulfilment bindings, and publication timestamps. Its
-output is intentionally public only; encrypted private-key envelopes are never printed.
+three immutable service versions and the Gateway machine credential. Repeating the command returns
+the same creation timestamp, public JWKs, service IDs, versions, prices, fulfilment bindings,
+publication timestamps, and public credential metadata. Its output is intentionally public only;
+tokens and encrypted private-key envelopes are never printed.
 
 ## Verification
 
@@ -75,3 +81,28 @@ reject updates, deletes, conflicting upserts, and replacement inserts, so changi
 price, policy, fulfilment binding, or other field requires a new service version and catalog
 version. Feed refreshes preserve the service records while using a fresh nonce, issuance, expiry,
 and signature.
+
+## ACP checkout API
+
+SignalWorks implements the pinned ACP `2026-04-17` operations:
+
+- `POST /checkout_sessions`
+- `POST /checkout_sessions/:checkout_session_id`
+- `GET /checkout_sessions/:checkout_session_id`
+- `POST /checkout_sessions/:checkout_session_id/complete`
+- `POST /checkout_sessions/:checkout_session_id/cancel`
+
+All methods require `Authorization: Bearer ...`, `API-Version: 2026-04-17`, and `Request-Id`.
+Mutations also require `Idempotency-Key`. The idempotency key is scoped to the authenticated
+credential and exact endpoint and bound to canonical request JSON. Matching retries receive the
+stored response; using the key with changed input returns `409`.
+
+ACP bodies remain unmodified and validate against the vendored schema. The response headers
+`X-MindPay-ACP-Signature`, `X-MindPay-Checkout`, and `X-MindPay-Checkout-Signature` carry bounded
+base64url canonical proofs from the checkout-purpose key. Caller-supplied names and prices never
+override the immutable catalog.
+
+Accepted mutations append immutable signed lifecycle events to `merchant_outbound_events`. The
+shared verifier checks audience, issuer, timestamp, expiry, nonce replay, state hash, signature,
+and event-key lifecycle. Completing the ACP contract creates an order record but does not contact
+Razorpay; merchant-owned Test Mode payment starts in Phase 7.
