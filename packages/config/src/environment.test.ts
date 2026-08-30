@@ -81,10 +81,12 @@ describe("SignalWorks environment", () => {
       parseSignalWorksEnvironment({
         ENVIRONMENT: "development",
         SIGNALWORKS_KEY_ENCRYPTION_KEY: validSecret,
+        SIGNALWORKS_MACHINE_AUTH_TOKEN: "mindpay_test_machine_token_0000000001",
       }),
     ).toEqual({
       ENVIRONMENT: "development",
       SIGNALWORKS_KEY_ENCRYPTION_KEY: validSecret,
+      SIGNALWORKS_MACHINE_AUTH_TOKEN: "mindpay_test_machine_token_0000000001",
     });
 
     for (const invalidSecret of ["short", `${validSecret}=`, "!".repeat(43)]) {
@@ -92,6 +94,7 @@ describe("SignalWorks environment", () => {
         parseSignalWorksEnvironment({
           ENVIRONMENT: "development",
           SIGNALWORKS_KEY_ENCRYPTION_KEY: invalidSecret,
+          SIGNALWORKS_MACHINE_AUTH_TOKEN: "mindpay_test_machine_token_0000000001",
         }),
       ).toThrow();
     }
