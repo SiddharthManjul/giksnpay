@@ -47,6 +47,12 @@ export const signalWorksKeyEncryptionSecretSchema = z
     "SignalWorks key encryption secret must be 32 bytes of unpadded base64url",
   );
 
+export const signalWorksMachineAuthTokenSchema = z
+  .string()
+  .min(32, "SignalWorks machine token must contain at least 32 characters")
+  .max(512, "SignalWorks machine token cannot exceed 512 characters")
+  .regex(/^[\x21-\x7e]+$/u, "SignalWorks machine token must be printable ASCII without spaces");
+
 export const workerEnvironmentSchema = z
   .object({
     ENVIRONMENT: runtimeEnvironmentSchema,
@@ -105,6 +111,7 @@ export const signalWorksEnvironmentSchema = z
   .object({
     ENVIRONMENT: runtimeEnvironmentSchema,
     SIGNALWORKS_KEY_ENCRYPTION_KEY: signalWorksKeyEncryptionSecretSchema,
+    SIGNALWORKS_MACHINE_AUTH_TOKEN: signalWorksMachineAuthTokenSchema,
   })
   .strict()
   .readonly();
