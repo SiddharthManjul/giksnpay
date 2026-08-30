@@ -1,5 +1,11 @@
-import type { Es256PublicJwk } from "@mindpay/contracts";
+import type {
+  Es256CanonicalSignature,
+  Es256PublicJwk,
+  MerchantCheckout,
+  MerchantOrderLifecycleEvent,
+} from "@mindpay/contracts";
 import type { AesGcmEnvelope } from "@mindpay/crypto";
+import type { AcpCheckoutSession } from "@mindpay/protocol-acp";
 import { sql } from "drizzle-orm";
 import {
   check,
@@ -15,6 +21,14 @@ export const signalWorksMerchantStatuses = ["ACTIVE", "SUSPENDED"] as const;
 export const signalWorksSigningPurposes = ["catalog", "checkout", "event", "manifest"] as const;
 export const signalWorksServiceAvailabilities = ["available", "paused", "unavailable"] as const;
 export const signalWorksFulfilmentTypes = ["mcp", "rest"] as const;
+export const signalWorksCheckoutStatuses = ["ready_for_payment", "completed", "canceled"] as const;
+export const signalWorksIdempotencyStates = ["PENDING", "COMPLETED"] as const;
+export const signalWorksOrderEventTypes = [
+  "CHECKOUT_CREATED",
+  "CHECKOUT_UPDATED",
+  "ORDER_CREATED",
+  "CHECKOUT_CANCELED",
+] as const;
 
 export const signalWorksMerchantIdentity = sqliteTable(
   "merchant_identity",
@@ -222,8 +236,200 @@ export const signalWorksServiceVersions = sqliteTable(
   ],
 );
 
+export const signalWorksMachineCredentials = sqliteTable(
+  "merchant_machine_credentials",
+  {
+    id: text("id").primaryKey(),
+    label: text("label").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    validFrom: integer("valid_from", { mode: "timestamp_ms" }).notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("merchant_machine_credentials_token_hash_uq").on(table.tokenHash),
+    index("merchant_machine_credentials_lifecycle_idx").on(
+      table.validFrom,
+      table.expiresAt,
+      table.revokedAt,
+    ),
+    check("merchant_machine_credentials_id_valid", sql`length(${table.id}) between 8 and 128`),
+    check(
+      "merchant_machine_credentials_label_valid",
+      sql`length(trim(${table.label})) between 2 and 120`,
+    ),
+    check(
+      "merchant_machine_credentials_hash_valid",
+      sql`length(${table.tokenHash}) = 64 and ${table.tokenHash} not glob '*[^0-9a-f]*'`,
+    ),
+    check(
+      "merchant_machine_credentials_window_valid",
+      sql`${table.createdAt} <= ${table.validFrom} and ${table.expiresAt} > ${table.validFrom}`,
+    ),
+    check(
+      "merchant_machine_credentials_revocation_valid",
+      sql`${table.revokedAt} is null or ${table.revokedAt} >= ${table.validFrom}`,
+    ),
+  ],
+);
+
+export const signalWorksCheckoutSessions = sqliteTable(
+  "merchant_checkout_sessions",
+  {
+    id: text("id").primaryKey(),
+    credentialId: text("credential_id")
+      .notNull()
+      .references(() => signalWorksMachineCredentials.id, {
+        onDelete: "restrict",
+        onUpdate: "cascade",
+      }),
+    status: text("status", { enum: signalWorksCheckoutStatuses }).notNull(),
+    revision: integer("revision").notNull(),
+    acpState: text("acp_state", { mode: "json" }).$type<AcpCheckoutSession>().notNull(),
+    acpStateHash: text("acp_state_hash").notNull(),
+    acpSignature: text("acp_signature", { mode: "json" })
+      .$type<Es256CanonicalSignature>()
+      .notNull(),
+    merchantCheckout: text("merchant_checkout", { mode: "json" })
+      .$type<MerchantCheckout>()
+      .notNull(),
+    merchantCheckoutSignature: text("merchant_checkout_signature", { mode: "json" })
+      .$type<Es256CanonicalSignature>()
+      .notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    index("merchant_checkout_sessions_credential_idx").on(table.credentialId, table.createdAt),
+    index("merchant_checkout_sessions_status_idx").on(table.status, table.expiresAt),
+    check(
+      "merchant_checkout_sessions_id_valid",
+      sql`length(${table.id}) = 35 and substr(${table.id}, 1, 9) = 'checkout_'`,
+    ),
+    check(
+      "merchant_checkout_sessions_status_valid",
+      sql`${table.status} in ('ready_for_payment', 'completed', 'canceled')`,
+    ),
+    check("merchant_checkout_sessions_revision_valid", sql`${table.revision} >= 1`),
+    check(
+      "merchant_checkout_sessions_json_valid",
+      sql`json_valid(${table.acpState}) and json_valid(${table.acpSignature}) and json_valid(${table.merchantCheckout}) and json_valid(${table.merchantCheckoutSignature})`,
+    ),
+    check(
+      "merchant_checkout_sessions_hash_valid",
+      sql`length(${table.acpStateHash}) = 64 and ${table.acpStateHash} not glob '*[^0-9a-f]*'`,
+    ),
+    check(
+      "merchant_checkout_sessions_timestamps_valid",
+      sql`${table.createdAt} <= ${table.updatedAt} and ${table.expiresAt} > ${table.createdAt}`,
+    ),
+  ],
+);
+
+export const signalWorksIdempotencyRecords = sqliteTable(
+  "merchant_idempotency_records",
+  {
+    scope: text("scope").notNull(),
+    key: text("key").notNull(),
+    requestId: text("request_id").notNull(),
+    requestHash: text("request_hash").notNull(),
+    state: text("state", { enum: signalWorksIdempotencyStates }).notNull(),
+    responseStatus: integer("response_status"),
+    responseBody: text("response_body", { mode: "json" }).$type<unknown>(),
+    responseHeaders: text("response_headers", { mode: "json" }).$type<Record<string, string>>(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.scope, table.key] }),
+    index("merchant_idempotency_records_expiry_idx").on(table.expiresAt),
+    check(
+      "merchant_idempotency_records_scope_valid",
+      sql`length(${table.scope}) between 8 and 512`,
+    ),
+    check("merchant_idempotency_records_key_valid", sql`length(${table.key}) between 1 and 255`),
+    check(
+      "merchant_idempotency_records_request_id_valid",
+      sql`length(${table.requestId}) between 1 and 255`,
+    ),
+    check(
+      "merchant_idempotency_records_hash_valid",
+      sql`length(${table.requestHash}) = 64 and ${table.requestHash} not glob '*[^0-9a-f]*'`,
+    ),
+    check(
+      "merchant_idempotency_records_state_valid",
+      sql`${table.state} in ('PENDING', 'COMPLETED')`,
+    ),
+    check(
+      "merchant_idempotency_records_response_valid",
+      sql`(${table.state} = 'PENDING' and ${table.responseStatus} is null and ${table.responseBody} is null and ${table.responseHeaders} is null) or (${table.state} = 'COMPLETED' and ${table.responseStatus} between 100 and 599 and json_valid(${table.responseBody}) and json_valid(${table.responseHeaders}))`,
+    ),
+    check(
+      "merchant_idempotency_records_expiry_valid",
+      sql`${table.expiresAt} > ${table.createdAt}`,
+    ),
+  ],
+);
+
+export const signalWorksOutboundEvents = sqliteTable(
+  "merchant_outbound_events",
+  {
+    eventId: text("event_id").primaryKey(),
+    checkoutSessionId: text("checkout_session_id")
+      .notNull()
+      .references(() => signalWorksCheckoutSessions.id, {
+        onDelete: "restrict",
+        onUpdate: "cascade",
+      }),
+    eventType: text("event_type", { enum: signalWorksOrderEventTypes }).notNull(),
+    nonce: text("nonce").notNull(),
+    kid: text("kid").notNull(),
+    event: text("event", { mode: "json" }).$type<MerchantOrderLifecycleEvent>().notNull(),
+    signature: text("signature", { mode: "json" }).$type<Es256CanonicalSignature>().notNull(),
+    stateHash: text("state_hash").notNull(),
+    occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("merchant_outbound_events_nonce_uq").on(table.nonce),
+    index("merchant_outbound_events_checkout_idx").on(table.checkoutSessionId, table.occurredAt),
+    check(
+      "merchant_outbound_events_id_valid",
+      sql`length(${table.eventId}) = 30 and substr(${table.eventId}, 1, 4) = 'evt_'`,
+    ),
+    check(
+      "merchant_outbound_events_type_valid",
+      sql`${table.eventType} in ('CHECKOUT_CREATED', 'CHECKOUT_UPDATED', 'ORDER_CREATED', 'CHECKOUT_CANCELED')`,
+    ),
+    check("merchant_outbound_events_nonce_valid", sql`length(${table.nonce}) between 16 and 128`),
+    check(
+      "merchant_outbound_events_kid_valid",
+      sql`length(${table.kid}) between 1 and 128 and ${table.kid} not glob '*[^A-Za-z0-9._:-]*'`,
+    ),
+    check(
+      "merchant_outbound_events_json_valid",
+      sql`json_valid(${table.event}) and json_valid(${table.signature})`,
+    ),
+    check(
+      "merchant_outbound_events_hash_valid",
+      sql`length(${table.stateHash}) = 64 and ${table.stateHash} not glob '*[^0-9a-f]*'`,
+    ),
+    check(
+      "merchant_outbound_events_timestamps_valid",
+      sql`${table.createdAt} = ${table.occurredAt} and ${table.expiresAt} > ${table.occurredAt}`,
+    ),
+  ],
+);
+
 export const signalWorksSchema = {
+  signalWorksCheckoutSessions,
+  signalWorksIdempotencyRecords,
+  signalWorksMachineCredentials,
   signalWorksMerchantIdentity,
+  signalWorksOutboundEvents,
   signalWorksServiceVersions,
   signalWorksSigningKeys,
 };
@@ -231,3 +437,7 @@ export const signalWorksSchema = {
 export type SignalWorksMerchantIdentityRow = typeof signalWorksMerchantIdentity.$inferSelect;
 export type SignalWorksSigningKeyRow = typeof signalWorksSigningKeys.$inferSelect;
 export type SignalWorksServiceVersionRow = typeof signalWorksServiceVersions.$inferSelect;
+export type SignalWorksMachineCredentialRow = typeof signalWorksMachineCredentials.$inferSelect;
+export type SignalWorksCheckoutSessionRow = typeof signalWorksCheckoutSessions.$inferSelect;
+export type SignalWorksIdempotencyRecordRow = typeof signalWorksIdempotencyRecords.$inferSelect;
+export type SignalWorksOutboundEventRow = typeof signalWorksOutboundEvents.$inferSelect;
