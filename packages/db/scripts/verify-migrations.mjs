@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -10,6 +10,7 @@ const databaseName = "mindpay-local";
 const temporaryRoot = mkdtempSync(join(tmpdir(), "mindpay-d1-verification-"));
 const firstDatabase = join(temporaryRoot, "first");
 const secondDatabase = join(temporaryRoot, "second");
+const migrationsRoot = join(packageRoot, "migrations");
 
 const expectedTables = [
   "account",
@@ -17,12 +18,21 @@ const expectedTables = [
   "audit_events",
   "demo_workspaces",
   "idempotency_records",
+  "marketplace_cache_versions",
+  "merchant_admin_events",
+  "merchant_catalogs",
+  "merchant_keys",
+  "merchant_manifests",
+  "merchant_verifications",
+  "merchants",
   "organization_members",
   "organizations",
   "passkey_credentials",
   "passkey_registration_challenges",
   "rate_limit",
   "replay_nonces",
+  "service_versions",
+  "services",
   "session",
   "user",
   "verification",
@@ -31,8 +41,19 @@ const expectedTables = [
 const expectedTriggers = [
   "audit_events_no_delete",
   "audit_events_no_update",
+  "merchant_admin_events_no_delete",
+  "merchant_admin_events_no_update",
+  "merchant_admin_events_require_current_mutation",
+  "merchant_catalogs_no_delete",
+  "merchant_catalogs_no_update",
+  "merchant_manifests_no_delete",
+  "merchant_manifests_no_update",
+  "merchant_verifications_no_delete",
+  "merchant_verifications_no_update",
   "organization_members_preserve_owner_on_delete",
   "organization_members_preserve_owner_on_update",
+  "service_versions_no_delete",
+  "service_versions_no_update",
 ];
 const hashA = "a".repeat(64);
 const hashB = "b".repeat(64);
@@ -41,6 +62,7 @@ const createdAt = 1_788_000_000_000;
 const expiresAt = createdAt + 300_000;
 
 try {
+  verifyDrizzleMetadata();
   applyMigrations(firstDatabase);
   applyMigrations(firstDatabase);
   applyMigrations(secondDatabase);
@@ -62,7 +84,7 @@ try {
   assertEqual(triggerNames, expectedTriggers, "Database integrity triggers are missing");
 
   const migrationCount = query(firstDatabase, "SELECT count(*) AS count FROM d1_migrations");
-  assert(migrationCount[0]?.count === 5, "Every migration must be recorded exactly once");
+  assert(migrationCount[0]?.count === 6, "Every migration must be recorded exactly once");
 
   seedIntegrityRecords(firstDatabase);
   verifyUniqueness(firstDatabase);
@@ -78,6 +100,26 @@ try {
   );
 } finally {
   rmSync(temporaryRoot, { force: true, recursive: true });
+}
+
+function verifyDrizzleMetadata() {
+  const migrationTags = readdirSync(migrationsRoot)
+    .filter((name) => name.endsWith(".sql"))
+    .map((name) => name.slice(0, -4))
+    .sort();
+  const journal = JSON.parse(readFileSync(join(migrationsRoot, "meta", "_journal.json"), "utf8"));
+  const journalTags = journal.entries.map((entry) => entry.tag).sort();
+  assertEqual(
+    journalTags,
+    migrationTags,
+    "Drizzle journal entries do not match the reviewed SQL migrations",
+  );
+  const latestPrefix = migrationTags.at(-1)?.split("_")[0];
+  assert(latestPrefix !== undefined, "At least one SQL migration is required");
+  assert(
+    readdirSync(join(migrationsRoot, "meta")).includes(`${latestPrefix}_snapshot.json`),
+    `Drizzle snapshot ${latestPrefix}_snapshot.json is missing for the latest migration`,
+  );
 }
 
 function applyMigrations(persistTo) {
