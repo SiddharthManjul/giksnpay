@@ -29,6 +29,13 @@ The fifth migration adds `demo_workspaces`, keeping 24-hour demo expiry metadata
 permanent organizations. The organization foreign key cascades lifecycle cleanup, while the expiry
 index supports authorization and future cleanup scans.
 
+The sixth migration adds canonical merchant review state, public keys, immutable manifests,
+catalogs, verification checks and service versions, append-only administration events, and the D1
+generation used to validate KV marketplace documents. A current-event trigger turns merchant
+revision updates into a compare-and-swap boundary, preventing concurrent reviewer actions from
+both committing. Verification expiry is stored separately from verification time so discovery can
+fail closed without another write.
+
 Timestamps are UTC epoch milliseconds. JSON columns are storage-only values and must still be
 validated by their owning contract before insertion and after retrieval.
 
