@@ -27,8 +27,8 @@
 3. the shared organization role/capability policy tests; and
 4. Gateway security integration tests against Miniflare D1 and the local Worker application.
 
-The verified run passed 87 focused Vitest cases: six database schema cases, 12 boundary-contract
-cases, 11 role-policy cases, and 58 Gateway security cases. The D1 step additionally passed the
+The verified run passed 91 focused Vitest cases: seven database schema cases, 12 boundary-contract
+cases, 14 role-policy cases, and 58 Gateway security cases. The D1 step additionally passed the
 reproducibility, uniqueness, check-constraint, owner-integrity, and append-only trigger probes.
 
 ## Verified commands
