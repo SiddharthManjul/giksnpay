@@ -17,6 +17,8 @@
     "@mindpay/config": "workspace:*",
     "@mindpay/contracts": "workspace:*",
     "@mindpay/crypto": "workspace:*",
+    "@mindpay/domain": "workspace:*",
+    "@mindpay/protocol-acp": "workspace:*",
     "drizzle-orm": "catalog:",
     "hono": "catalog:",
     "zod": "catalog:"
