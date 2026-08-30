@@ -9,6 +9,7 @@ export {
   type SignalWorksEnvironment,
   signalWorksEnvironmentSchema,
   signalWorksKeyEncryptionSecretSchema,
+  signalWorksMachineAuthTokenSchema,
   type WorkerEnvironment,
   workerEnvironmentSchema,
 } from "./environment";
