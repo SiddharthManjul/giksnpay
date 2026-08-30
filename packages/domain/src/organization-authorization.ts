@@ -16,6 +16,8 @@ export const organizationCapabilities = Object.freeze([
   "agent:read",
   "agent:write",
   "approval:review",
+  "merchant:submit",
+  "merchant:review",
 ] as const);
 
 export const organizationRoleSchema = z.enum(organizationRoles);
@@ -26,9 +28,21 @@ export type OrganizationCapability = z.infer<typeof organizationCapabilitySchema
 
 const roleCapabilities = {
   ADMIN: organizationCapabilities,
-  BUILDER: Object.freeze(["organization:read", "member:read", "agent:read", "agent:write"]),
+  BUILDER: Object.freeze([
+    "organization:read",
+    "member:read",
+    "agent:read",
+    "agent:write",
+    "merchant:submit",
+  ]),
   OWNER: organizationCapabilities,
-  REVIEWER: Object.freeze(["organization:read", "member:read", "agent:read", "approval:review"]),
+  REVIEWER: Object.freeze([
+    "organization:read",
+    "member:read",
+    "agent:read",
+    "approval:review",
+    "merchant:review",
+  ]),
   VIEWER: Object.freeze(["organization:read", "member:read", "agent:read"]),
 } as const satisfies Readonly<Record<OrganizationRole, readonly OrganizationCapability[]>>;
 
