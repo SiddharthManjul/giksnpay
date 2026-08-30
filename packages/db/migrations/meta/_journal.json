@@ -36,6 +36,13 @@
       "when": 1788007273190,
       "tag": "0004_demo_workspaces",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1788060182871,
+      "tag": "0005_marketplace_verification",
+      "breakpoints": true
     }
   ]
 }
