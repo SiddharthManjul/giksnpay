@@ -4,8 +4,7 @@ Last updated: 2026-08-30
 
 ## Current phase
 
-Phases 0, 1, and 2 are complete. Phase 3 is in progress. The next ticket is MP-0304, the ACP
-checkout state machine.
+Phases 0 through 4 are complete. The next ticket is MP-0501, agent CRUD and immutable versioning.
 
 ## Phase progress
 
@@ -14,8 +13,8 @@ checkout state machine.
 | 0. Repository and guardrails | Complete | All workspaces build; format, lint, typecheck, and tests pass |
 | 1. Contracts, crypto, and protocols | Complete | Schema and cryptographic conformance tests pass |
 | 2. Database, auth, and tenancy | Complete | Auth, roles, passkeys, and audit immutability pass |
-| 3. SignalWorks merchant | In progress | Signed manifest, catalog, and ACP checkout pass |
-| 4. Marketplace and verification | Not started | Only verified services are discoverable |
+| 3. SignalWorks merchant | Complete | Signed manifest, catalog, and ACP checkout pass |
+| 4. Marketplace and verification | Complete | Only verified services are discoverable |
 | 5. Agents and runtime | Not started | Typed approved tools and manual fallback work |
 | 6. Mandates, policy, and risk | Not started | ₹299 allows, ₹449 reviews, and ₹799 blocks |
 | 7. Razorpay Test Mode | Not started | Success, failure, deduplication, and reconciliation pass |
@@ -240,7 +239,7 @@ Verification record: `docs/verification/phase-00.md`.
 - Verified session lifecycle and fixation resistance, passkey proof boundaries, explicit role
   allow/deny behavior, non-enumerating BOLA responses, credentialed CORS and CSRF enforcement,
   durable rate limiting, and isolated idempotent demo provisioning.
-- Passed 87 focused Phase 2 Vitest cases plus the D1 integrity probes against local Worker and D1
+- Passed 91 focused Phase 2 Vitest cases plus the D1 integrity probes against local Worker and D1
   runtimes.
 - Refreshed ADR-0007 through ADR-0012 and recorded the reproducible exit evidence in
   `docs/verification/phase-02.md`.
@@ -312,6 +311,109 @@ Verification record: `docs/verification/phase-02.md`.
 - Recorded the immutable signed catalog boundary in ADR-0015.
 - Verified `pnpm check` and `pnpm build` across all workspaces.
 
+### MP-0304 complete
+
+- Implemented the pinned ACP create, update, get, complete, and cancel endpoints with complete
+  authoritative state, integer INR service prices, and no caller-controlled price authority.
+- Persisted every ACP state revision, canonical hash, detached checkout-key signature, strict
+  merchant checkout, and merchant-checkout signature in the separate SignalWorks D1.
+- Enforced compare-and-swap transitions from `ready_for_payment`; completed, canceled, and expired
+  sessions return `409` without changing their stored state.
+- Returned proof headers without adding forbidden properties to ACP response bodies and proved a
+  semantic one-byte mutation fails signature verification.
+
+### MP-0305 complete
+
+- Added hashed, expiring, revocable MindPay Gateway machine credentials and required bearer auth,
+  pinned `API-Version`, and `Request-Id` before all ACP access.
+- Required `Idempotency-Key` for every mutation, scoped records to credential and endpoint, and
+  bound them to canonical request JSON.
+- Replayed exact stored status, body, and signature headers for matching requests; changed payloads
+  return `409`, and invalid or expired credentials cause zero idempotency or checkout writes.
+
+### MP-0306 complete
+
+- Added an immutable D1 outbox with one signed lifecycle event for every accepted checkout
+  mutation; events bind merchant, checkout, order where applicable, exact state hash, issuance,
+  expiry, nonce, and event-purpose key ID.
+- Added a reusable MindPay verifier for schema, audience, issuer, expected merchant identity,
+  lifetime, canonical signature, key lifecycle, and atomic nonce replay claims.
+- Proved valid event acceptance, replay/expiry/unknown-key rejection, planned two-key overlap, and
+  immediate rejection of revoked event keys.
+
+### MP-0307 complete
+
+- Extended the repeatable local seed with the Gateway machine credential while keeping plaintext
+  tokens and private key material out of output.
+- Proved two independent fresh merchant databases converge on the same public merchant contract,
+  catalog payload, exact three service versions, and credential metadata.
+- Added Gateway-to-merchant integration coverage for every ACP operation without Razorpay
+  credentials and a fail-fast `pnpm verify:phase-03` exit suite.
+- Recorded the signed ACP, idempotency, and event-outbox boundary in ADR-0016 and the reproducible
+  exit evidence in `docs/verification/phase-03.md`.
+- Verified `pnpm verify:phase-03`, `pnpm check`, and `pnpm build` across all workspaces.
+
+## Phase 4 activity
+
+### MP-0401 complete
+
+- Added organization-scoped merchant submission, verification, reverification, and suspension APIs
+  with dedicated submit/review capabilities.
+- Bound every mutation to a canonical request hash and idempotency key, then committed state,
+  append-only admin evidence, cache generation, and the exact stored response atomically.
+- Added revision and current-event compare-and-swap enforcement so concurrent reviewer actions
+  cannot both commit.
+
+### MP-0402 complete
+
+- Added a fail-closed verifier for public DNS destinations, exact HTTPS URLs, redirects, strict
+  manifests/catalogs, audience/domain/merchant binding, key lifecycle, signatures, expiry, stable
+  service IDs, immutable versions, integer INR prices, fulfilment bindings, and `razorpay:test`.
+- Added stable check-specific failure reasons and immutable D1 evidence for every verification run.
+- Added shared signed-catalog verification contracts and adversarial redirect, expiry, merchant,
+  mutation, and private-network tests.
+
+### MP-0403 complete
+
+- Added an explicit verification transition table covering all required approval stages.
+- Safe signed catalog versions remain approved; key, domain, endpoint, payment, downgrade, and
+  same-version-content changes require review; invalid signatures quarantine immediately.
+- Reviewer approval can recover reviewed or quarantined merchants only after all checks pass again.
+
+### MP-0404 complete
+
+- Added immutable verified manifest, catalog, key, service, and service-version persistence in D1.
+- Added a KV public index whose documents are accepted only when their generation matches D1 and
+  their earliest verification boundary remains unexpired.
+- Proved a stale approved KV document cannot restore reviewed, quarantined, suspended, or expired
+  services.
+
+### MP-0405 complete
+
+- Added public typed service search, service detail, and merchant trust endpoints.
+- Added strict filters, bounded prices and limits, deterministic ordering, opaque cursor pagination,
+  and non-secret tier, rail, protocol, fulfilment, check-time, and verification-time details.
+
+### MP-0406 and Phase 4 complete
+
+- Added a single lifecycle integration proving submission exclusion, signed approval, discovery,
+  safe catalog re-indexing, material-key review, signature quarantine, stale-cache rejection,
+  reviewer recovery, evidence expiry, suspension, idempotent replay, and role denial.
+- Added the `pnpm verify:phase-04` exit suite, ADR-0017, and the reproducible Phase 4 verification
+  record.
+- Verified `pnpm verify:phase-04`, `pnpm check`, `pnpm build`, and `git diff --check`.
+
+### Phase 0–4 audit complete
+
+- Reconciled every completed backlog item with the master implementation plan and reran the focused
+  Phase 2, Phase 3, and Phase 4 exit suites.
+- Bound signed order events to the expected merchant, separated ACP transaction protocol from
+  fulfilment transport, and limited trust details to the latest immutable verification run.
+- Bounded merchant publication reads by time and size, restored Drizzle journal/snapshot parity for
+  the reviewed manual Phase 4 migration, and added a migration-metadata drift guard.
+
+Verification record: `docs/verification/phase-04.md`.
+
 ## Blockers
 
-None. Credentials are not required until later phases.
+None. Razorpay and other third-party credentials are not required until later phases.
