@@ -62,7 +62,7 @@ Expose immutable versions for ₹299, ₹449, and ₹799 SignalWorks services wi
 ### MP-0304: Implement the ACP checkout state machine
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0107, MP-0302, MP-0303
 - Size: 1-3 engineering days
 
@@ -72,14 +72,14 @@ Implement create, update, get, complete, and cancel checkout endpoints with auth
 
 **Acceptance criteria**
 
-- [ ] Every response validates against the pinned ACP schema.
-- [ ] Illegal transitions return `409` without altering stored checkout state.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Every response validates against the pinned ACP schema.
+- [x] Illegal transitions return `409` without altering stored checkout state.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0305: Implement merchant idempotency and request authentication
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0304
 - Size: 1-3 engineering days
 
@@ -89,14 +89,14 @@ Protect every ACP mutation with bearer auth, API version, request ID, and payloa
 
 **Acceptance criteria**
 
-- [ ] Same key and request returns the stored response; changed input returns `409`.
-- [ ] Expired or invalid machine credentials are rejected before any write.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Same key and request returns the stored response; changed input returns `409`.
+- [x] Expired or invalid machine credentials are rejected before any write.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0306: Implement signed outbound merchant events and key rotation behavior
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0301, MP-0304
 - Size: 1-3 engineering days
 
@@ -106,14 +106,14 @@ Emit replay-protected signed order lifecycle events with timestamp, nonce, and e
 
 **Acceptance criteria**
 
-- [ ] MindPay verifies a valid event and rejects replay, expiry, and unknown keys.
-- [ ] A planned key rotation accepts the overlap window without accepting revoked keys.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] MindPay verifies a valid event and rejects replay, expiry, and unknown keys.
+- [x] A planned key rotation accepts the overlap window without accepting revoked keys.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0307: Seed merchant services and complete contract/integration tests
 
 - Priority: High
-- Status: Ready
+- Status: Done
 - Depends on: MP-0302, MP-0303, MP-0305, MP-0306
 - Size: 1-3 engineering days
 
@@ -123,12 +123,12 @@ Provide the repeatable SignalWorks seed command and close the merchant contract 
 
 **Acceptance criteria**
 
-- [ ] A fresh merchant database reaches the same manifest, catalog, and service versions.
-- [ ] Gateway-to-merchant contract tests pass without Razorpay credentials.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] A fresh merchant database reaches the same manifest, catalog, and service versions.
+- [x] Gateway-to-merchant contract tests pass without Razorpay credentials.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ## Phase completion
 
-- [ ] Every ticket above is Done.
-- [ ] The exit gate is demonstrated in CI or a reproducible verification record.
-- [ ] Architecture changes are recorded in `docs/adr/`.
+- [x] Every ticket above is Done.
+- [x] The exit gate is demonstrated in CI or a reproducible verification record.
+- [x] Architecture changes are recorded in `docs/adr/`.
