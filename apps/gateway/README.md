@@ -104,3 +104,44 @@ Challenges expire after five minutes, are stored only as SHA-256 hashes, bind to
 user, origin, and RP ID, and are atomically consumed before attestation verification. Failed
 verification requires new options. Credential management responses expose only display metadata;
 authenticator credential IDs, public keys, user handles, and counters remain server-side.
+
+## Merchant verification administration
+
+Merchant mutations require the selected organization, an authenticated capability, and a unique
+idempotency key:
+
+```text
+POST /api/v1/admin/merchants
+POST /api/v1/admin/merchants/:merchantId/verify
+POST /api/v1/admin/merchants/:merchantId/reverify
+POST /api/v1/admin/merchants/:merchantId/suspend
+```
+
+BUILDER may submit; REVIEWER may verify, reverify, and suspend; OWNER and ADMIN have both
+capabilities. Every accepted mutation is request-hash bound and append-only audited. Verification
+resolves only public destinations, rejects redirects, binds exact HTTPS origins, validates strict
+signed manifest and catalog contracts, and stores stable failure reasons. Safe catalog versions
+re-index. Material key, domain, endpoint, payment, downgrade, or same-version-content changes enter
+`REVIEW_REQUIRED`; signature failure enters `QUARANTINED`.
+
+## Public marketplace
+
+These endpoints are public and derive only from active, approved, unexpired D1 state:
+
+```text
+GET /api/v1/marketplace/services
+GET /api/v1/marketplace/services/:serviceId
+GET /api/v1/marketplace/merchants/:merchantId
+```
+
+Search supports `q`, `category`, `merchantId`, `availability`, `fulfilment`, integer
+`minPriceSubunits`/`maxPriceSubunits`, bounded `limit`, and the returned opaque `cursor`. Results are
+deterministically ordered. KV accelerates the public service document but is never authoritative:
+its D1 generation must match and its verification expiry must remain in the future. If either check
+fails, Gateway rebuilds from canonical D1 before responding.
+
+Run the focused marketplace exit suite with:
+
+```sh
+pnpm verify:phase-04
+```
