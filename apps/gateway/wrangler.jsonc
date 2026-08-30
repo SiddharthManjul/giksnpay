@@ -10,6 +10,7 @@
   "vars": {
     "BETTER_AUTH_URL": "http://localhost:8787",
     "ENVIRONMENT": "development",
+    "MINDPAY_API_AUDIENCE": "https://api.mindpay.example/",
     "PASSKEY_RP_ID": "localhost",
     "TRUSTED_ORIGINS": "http://localhost:3000"
   },
@@ -19,6 +20,13 @@
       "database_name": "mindpay-local",
       "database_id": "00000000-0000-0000-0000-000000000001",
       "migrations_dir": "../../packages/db/migrations"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "MARKETPLACE_CACHE",
+      "id": "00000000000000000000000000000001",
+      "preview_id": "00000000000000000000000000000001"
     }
   ]
 }
