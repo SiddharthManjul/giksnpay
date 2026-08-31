@@ -12,6 +12,13 @@
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@ai-sdk/openai": "catalog:",
+    "@mindpay/config": "workspace:*",
+    "@mindpay/contracts": "workspace:*",
+    "@mindpay/crypto": "workspace:*",
+    "ai": "catalog:",
+    "zod": "catalog:"
+  },
   "devDependencies": {}
 }
