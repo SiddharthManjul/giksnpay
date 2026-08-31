@@ -20,7 +20,10 @@
     "typecheck": "turbo run typecheck",
     "verify:phase-02": "node ./scripts/verify-phase-02.mjs",
     "verify:phase-03": "node ./scripts/verify-phase-03.mjs",
-    "verify:phase-04": "node ./scripts/verify-phase-04.mjs"
+    "verify:phase-04": "node ./scripts/verify-phase-04.mjs",
+    "verify:phase-05": "node ./scripts/verify-phase-05.mjs",
+    "verify:phase-06": "node ./scripts/verify-phase-06.mjs",
+    "verify:phase-07": "node ./scripts/verify-phase-07.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
