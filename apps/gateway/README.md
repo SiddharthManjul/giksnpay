@@ -12,11 +12,15 @@ Apply the checked-in D1 migrations before starting the Worker:
 pnpm --filter @mindpay/db migrations:apply
 ```
 
-Create an ignored `apps/gateway/.dev.vars` file containing a unique, high-entropy secret of at
-least 32 characters:
+Copy `apps/gateway/.dev.vars.example` to an ignored `apps/gateway/.dev.vars` file and replace the
+secret placeholders. The authentication secret must contain at least 32 characters. The agent-key
+secret must be exactly 32 random bytes encoded as unpadded base64url; it is an independent wrapping
+key. The OpenAI key is required only for live AI runs:
 
 ```dotenv
 BETTER_AUTH_SECRET=<generate-a-unique-high-entropy-value>
+AGENT_KEY_ENCRYPTION_KEY=<generate-32-random-bytes-as-unpadded-base64url>
+OPENAI_API_KEY=<create-an-openai-api-key-for-live-agent-runs>
 ```
 
 Then run the Gateway:
@@ -27,12 +31,13 @@ pnpm --filter @mindpay/gateway dev
 
 `BETTER_AUTH_URL`, `TRUSTED_ORIGINS`, and `PASSKEY_RP_ID` are non-secret local defaults in
 `wrangler.jsonc`. The RP ID must equal or be a parent domain of every trusted browser origin.
-Preview and production deployments must replace the origins with HTTPS values. Never add
-`BETTER_AUTH_SECRET` to tracked Wrangler variables or application source; provision it as a Worker
-secret instead:
+Preview and production deployments must replace the origins with HTTPS values. Never add secrets to
+tracked Wrangler variables or application source; provision them as Worker secrets instead:
 
 ```sh
 pnpm --filter @mindpay/gateway exec wrangler secret put BETTER_AUTH_SECRET
+pnpm --filter @mindpay/gateway exec wrangler secret put AGENT_KEY_ENCRYPTION_KEY
+pnpm --filter @mindpay/gateway exec wrangler secret put OPENAI_API_KEY
 ```
 
 ## Session boundary
@@ -124,6 +129,57 @@ signed manifest and catalog contracts, and stores stable failure reasons. Safe c
 re-index. Material key, domain, endpoint, payment, downgrade, or same-version-content changes enter
 `REVIEW_REQUIRED`; signature failure enters `QUARANTINED`.
 
+## Agent administration
+
+Agent reads require `agent:read`; creation, draft-version creation, and publication require
+`agent:write`. Every route is constrained by the selected organization header:
+
+```text
+GET  /api/v1/agents
+POST /api/v1/agents
+GET  /api/v1/agents/:agentId
+POST /api/v1/agents/:agentId/versions
+POST /api/v1/agents/:agentId/publish
+```
+
+Every mutation requires `Idempotency-Key`. Agent creation generates one ES256 signing identity.
+Only its public JWK reaches API responses; the private JWK is immediately A256GCM-wrapped with the
+agent ID and key ID as authenticated context. Published versions and their tool bindings are locked
+by D1 triggers, including against direct database writes. The registry accepts only the six
+reviewed tool versions; arbitrary URL, shell, raw-database, policy-mutation, and payment execution
+are not runtime capabilities.
+
+## Agent runs and manual fallback
+
+Agent execution and its evidence use the selected organization and the same `agent:read` or
+`agent:write` capabilities:
+
+```text
+POST /api/v1/agents/:agentId/runs
+POST /api/v1/agent-runs
+POST /api/v1/agent-runs/manual
+GET  /api/v1/agent-runs/:runId
+GET  /api/v1/agent-runs/:runId/events
+```
+
+Every run mutation requires `Idempotency-Key`. An exact retry returns the stored run without
+re-invoking the model or tools; reusing the key with different input returns 409. The nested route
+is canonical, while `/api/v1/agent-runs` accepts the same AI request with `agentId` in the body.
+
+The AI route parses a bounded intent, searches only current verified services, retrieves canonical
+service and signed-catalog evidence, applies every immutable tool scope, and builds a server-owned
+proposal. Merchant and model prose are untrusted and cannot select a payee, amount, tool, or state
+transition. Tool inputs and outputs, canonical hashes, latency, explicit terminal status, summaries,
+and the event sequence are persisted; hidden model reasoning is not part of the runtime or evidence
+contracts.
+
+The event endpoint is one-shot reconnectable SSE. Resume with `Last-Event-ID` or the equivalent
+`after` query value, process the remaining events, then honor the final `refetch` event by reading
+the canonical run. When the configured model provider is unavailable, the AI run closes with
+`PROVIDER_UNAVAILABLE`; public marketplace reads and manual selection remain usable. The manual
+route invokes the same scoped service lookup, signed offer, deterministic proposal, and evidence
+path without invoking a model.
+
 ## Public marketplace
 
 These endpoints are public and derive only from active, approved, unexpired D1 state:
@@ -144,4 +200,29 @@ Run the focused marketplace exit suite with:
 
 ```sh
 pnpm verify:phase-04
+```
+
+Run the complete agent-runtime and fallback exit suite with:
+
+```sh
+pnpm verify:phase-05
+```
+
+## Reserved payments and merchant evidence
+
+`POST /api/v1/transactions/:transactionId/checkout` creates a merchant payment order only while a
+live spend reservation and closed payment authority exist. A failed attempt releases that
+reservation; `POST /api/v1/transactions/:transactionId/retry` creates a new reservation only below
+the mandate attempt limit, after which checkout creates a distinct provider order.
+
+SignalWorks posts replay-protected signed results to
+`POST /api/internal/v1/merchant-payment-events` with the shared machine token. Gateway verifies the
+merchant event key, issuer, audience, expiry, nonce, tenant, transaction, attempt, and provider
+references. It commits budget and enters `PAYMENT_CAPTURED` only for exact paid-plus-captured
+evidence with an active reservation. Razorpay secrets never enter Gateway configuration.
+
+Run the complete deterministic payment boundary with:
+
+```sh
+pnpm verify:phase-07
 ```
