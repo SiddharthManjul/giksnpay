@@ -7,6 +7,7 @@ const FRONTEND_ORIGIN = "http://localhost:3000";
 const UNTRUSTED_ORIGIN = "https://attacker.example";
 
 const bindings: GatewayAuthBindings = {
+  AGENT_KEY_ENCRYPTION_KEY: "A".repeat(43),
   BETTER_AUTH_SECRET: "mindpay-test-auth-secret-with-at-least-32-characters",
   BETTER_AUTH_URL: AUTH_URL,
   DB: {} as D1Database,
