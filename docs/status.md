@@ -4,7 +4,8 @@ Last updated: 2026-08-30
 
 ## Current phase
 
-Phases 0 through 4 are complete. The next ticket is MP-0501, agent CRUD and immutable versioning.
+Phases 0 through 6 are complete. The next ticket is MP-0701, Razorpay Test Mode configuration and
+secret validation.
 
 ## Phase progress
 
@@ -15,8 +16,8 @@ Phases 0 through 4 are complete. The next ticket is MP-0501, agent CRUD and immu
 | 2. Database, auth, and tenancy | Complete | Auth, roles, passkeys, and audit immutability pass |
 | 3. SignalWorks merchant | Complete | Signed manifest, catalog, and ACP checkout pass |
 | 4. Marketplace and verification | Complete | Only verified services are discoverable |
-| 5. Agents and runtime | Not started | Typed approved tools and manual fallback work |
-| 6. Mandates, policy, and risk | Not started | ₹299 allows, ₹449 reviews, and ₹799 blocks |
+| 5. Agents and runtime | Complete | Typed approved tools and manual fallback work |
+| 6. Mandates, policy, and risk | Complete | ₹299 allows, ₹449 reviews, and ₹799 blocks |
 | 7. Razorpay Test Mode | Not started | Success, failure, deduplication, and reconciliation pass |
 | 8. Entitlements and MCP | Not started | A paid entitlement redeems exactly once |
 | 9. Audit and evidence | Not started | Public verification detects any mutation |
@@ -414,6 +415,220 @@ Verification record: `docs/verification/phase-02.md`.
 
 Verification record: `docs/verification/phase-04.md`.
 
+## Phase 5 activity
+
+### MP-0501 complete
+
+- Added strict organization-scoped agent, version, publication, configuration, and public signing
+  key contracts; private or encrypted key fields are rejected at the response boundary.
+- Added authenticated list, create, detail, draft-version, and publication APIs with explicit
+  `agent:read`/`agent:write` capabilities, non-enumerating tenancy, canonical request-hash
+  idempotency, and exact stored-response replay.
+- Added Worker-native ES256 identity generation and A256GCM private-JWK wrapping with agent/key/owner
+  authenticated context; only a canonical runtime secret can decrypt a non-extractable signing key.
+- Added four D1 agent tables plus public-key/envelope checks, organization uniqueness, valid-current
+  pointer triggers, and database-enforced immutability for published policy, configuration, and tool
+  bindings.
+- Added contract, runtime, migration-integrity, and real Better Auth/Miniflare/D1 integration tests
+  covering secret leakage, wrong-secret failure, idempotency, role denial, organization isolation,
+  and every direct-database publication mutation.
+- Added `pnpm verify:phase-05`, ADR-0018, and the MP-0501 verification record.
+
+Verification record: `docs/verification/phase-05-mp-0501.md`.
+
+### MP-0502 complete
+
+- Added a provider-neutral `ModelProvider` contract for typed agent-run streams and schema-owned
+  structured generation, with stable finish metadata, token usage, and sanitized error classes.
+- Added an environment-selected OpenAI adapter using the AI SDK. Vendor imports, model creation,
+  non-persistence options, and strict JSON-schema settings remain isolated in that adapter.
+- Added strict provider, model-name, and API-key configuration. Unknown bindings and endpoint
+  overrides fail closed instead of creating an unreviewed outbound destination.
+- Added a second MindPay schema validation after SDK parsing and exactly one invalid-output retry;
+  repeated malformed output is rejected before any caller can invoke commerce orchestration.
+- Added a text-only stream boundary that omits reasoning and provider-only events, requires terminal
+  finish metadata, and maps upstream or abort failures to stable runtime errors.
+- Added focused configuration and runtime tests, ADR-0019, and the MP-0502 verification record.
+
+Verification record: `docs/verification/phase-05-mp-0502.md`.
+
+### MP-0503 complete
+
+- Added a closed registry of six versioned typed tools and strict discriminated scopes persisted on
+  immutable published agent versions.
+- Added fail-closed input/output validation, bounded execution time, explicit terminal results, and
+  untrusted external-data labels with canonical hashes.
+- Proved arbitrary URL fetch, shell, raw database, policy mutation, and payment tools are absent and
+  cannot invoke a supplied implementation.
+
+### MP-0504 complete
+
+- Added organization-scoped agent runs, typed tool calls, and contiguous append-only run events with
+  input/output JSON, hashes, stable errors, latency, intent summaries, decisions, and proposals.
+- Bound AI and manual run writes to request-hash idempotency records; exact retries replay the stored
+  run without invoking the model or tools, while changed input returns a conflict.
+- Added D1 triggers that require the current published version and its immutable tool binding, freeze
+  terminal evidence, reject deletion, and prevent skipped or mutated event sequences.
+- Persisted only structured summaries and user-visible model text; hidden model reasoning is neither
+  requested by the runtime contract nor represented in the evidence schema.
+
+### MP-0505 complete
+
+- Added structured procurement intent parsing, verified marketplace search, canonical service
+  lookup, signed catalog-offer evidence, deterministic constraint comparison, and typed proposals.
+- Kept merchant IDs, recipients, service versions, prices, and catalog hashes server-owned. Model
+  prose explains a completed canonical selection but cannot choose or alter it.
+- Proved the ₹400 competitor-research request selects the current ₹299 SignalWorks offer even when a
+  competing merchant description contains tool, shell, policy, and recipient prompt injection.
+
+### MP-0506 complete
+
+- Added organization-scoped SSE run events with stable sequence IDs, `Last-Event-ID` or `after`
+  resume cursors, retry guidance, and an explicit canonical-state refetch control event.
+- Stored the same hashed event sequence in D1 and proved injected streamed model text cannot mutate
+  run status, create a transaction, or alter the proposal recipient.
+
+### MP-0507 complete
+
+- Added a provider-unavailable terminal state and fallback event while leaving marketplace reads and
+  evidence retrieval available.
+- Added a manual verified-service route that invokes the same scoped lookup, signed-offer, proposal,
+  evidence, and organization boundaries without invoking the model provider.
+- Added 50 deterministic synthetic intent evaluations across ten expected propose, reject, and
+  defer-to-policy classes.
+
+Verification record: `docs/verification/phase-05.md`.
+
+## Phase 6 activity
+
+### MP-0601 complete
+
+- Added canonical tenant-owned persistence for separate open checkout and payment mandates, their
+  verified proofs, transaction records, passkey approvals, consumed nonces, spend reservations,
+  bounded payment attempts, and provider-event evidence.
+- Added database checks for protocol schema discrimination, integer INR bounds, approval thresholds,
+  total budget and counters, transaction and attempt limits, lifecycle timestamps, JSON, hashes, and
+  retention deadlines.
+- Added D1 tenant-binding triggers that reject cross-organization user, agent/version, mandate,
+  transaction, service/merchant, challenge, credential, amount, and provider-attempt relationships.
+- Added partial and composite unique indexes rejecting duplicate active logical approvals, consumed
+  nonces, transaction attempt ordinals, provider orders, and provider event IDs.
+- Made signed identities and evidence immutable, allowed only intended lifecycle/processing updates,
+  and guarded every new table against deletion before its indexed retention deadline with restrictive
+  parent foreign keys.
+- Added the ordered `0008_mandate-persistence.sql` migration, 38-table/57-trigger reproducibility and
+  adversarial integrity coverage, the incremental `pnpm verify:phase-06` suite, ADR-0021, and the
+  MP-0601 verification record.
+
+Verification record: `docs/verification/phase-06-mp-0601.md`.
+
+### MP-0602 complete
+
+- Added authenticated, tenant-scoped mandate builder APIs that create separate canonical checkout
+  and payment mandates with immutable agent, version, user, constraint, nonce, and hash bindings.
+- Added inspect, activate, suspend, revoke, expire, and exhaust lifecycle operations with idempotent
+  writes and legal state preconditions.
+- Bound activation to the exact canonical mandate payload hash using an expiring, session-, user-,
+  RP-, origin-, credential-, and mandate-bound single-use WebAuthn assertion.
+
+### MP-0603 complete
+
+- Added explicit `AP2_ALIGNED_NOT_CONFORMANT` mappings for MindPay intent/cart/payment concepts,
+  retaining exact `mindpay.mandate.*.1` identifiers without claiming AP2 or SD-JWT conformance.
+- Added agent-signed closed checkout and payment mandates bound to the merchant checkout hash,
+  checkout session, offer, amount, payee, rail, open-mandate hashes, and attempt ordinal.
+- Added stable no-expansion verification for identity, expiry, merchant, service, line-item, amount,
+  payee, rail, attempt, and checkout-hash constraints.
+
+### MP-0604 complete
+
+- Added a versioned deterministic policy engine executing the documented checks in stable order and
+  returning immutable typed `ALLOW`, `APPROVAL_REQUIRED`, or `BLOCK` evidence.
+- Made mandate state, signature, expiry, identity, merchant, category, service, amount, currency,
+  rail, budget, attempt, nonce, idempotency, and risk facts authoritative; no model field can alter
+  the result.
+- Added an explicit frozen transaction transition table that rejects illegal and terminal-state
+  transitions.
+
+### MP-0605 complete
+
+- Added a versioned deterministic risk engine covering all specified integrity and replay blocks plus
+  threshold, first-purchase, amount-change, failure, fulfilment, and catalog review rules.
+- Kept optional model classification as recorded evidence only: it cannot downgrade a block or
+  silently upgrade review to allow.
+
+### MP-0606 complete
+
+- Added transaction step-up endpoints that challenge and approve the exact canonical closed-payment
+  mandate hash with a session-bound, origin-bound, expiring, single-use passkey assertion.
+- Stored the verified assertion, payload/proof hashes, credential counter, and challenge binding;
+  replayed, wrong-origin, expired, and different-payload attempts fail closed.
+- Kept ₹449 transactions in `APPROVAL_REQUIRED` until verification succeeds and budget is still
+  available at the post-approval reservation point.
+
+### MP-0607 complete
+
+- Added D1 triggers that atomically increment reserved budget during reservation insertion and reject
+  inactive, expired, over-transaction, over-count, or over-budget mandates in the same statement.
+- Added exactly-once commit, release, and expiry transitions that atomically move mandate counters,
+  return budget, and exhaust a fully spent/count-limited mandate.
+- Preserved retryable payload-bound challenges through a partial pending-challenge uniqueness rule.
+
+### MP-0608 complete
+
+- Added unit and property suites for AP2 mapping, signatures, constraint expansion, stable policy
+  order, checkout-hash mismatch rejection, all price gates, risk authority, budget bounds, and
+  illegal transaction transitions.
+- Added real Better Auth, Hono, WebAuthn-stub, Miniflare, and D1 integration coverage proving ₹299
+  auto-reservation, ₹449 exact step-up, ₹799 block with zero order-hook calls, idempotency mismatch,
+  revoke-before-reserve, replay/origin/expiry/payload rejection, and safe challenge retries.
+- Extended reproducible D1 verification to 38 tables and 63 integrity triggers, including
+  concurrent-budget rejection, atomic release, terminal-once enforcement, and revoked-mandate races.
+
+Verification record: `docs/verification/phase-06.md`.
+
+## Phase 7 activity
+
+### MP-0701 through MP-0708 complete
+
+- Added a Worker-compatible Razorpay Test Mode REST client with typed order/payment/refund
+  responses, server-only Basic Auth, redacted provider errors, timeouts, safe-read retry limits, and
+  no ambiguous POST retry.
+- Added closed-mandate payment authorization and public-only Standard Checkout contracts. The
+  Gateway invokes SignalWorks only for a live `BUDGET_RESERVED` transaction; blocked and
+  unreserved states stop before the provider dependency.
+- Added SignalWorks D1 payment attempts, verified callback evidence, provider events, and signed
+  payment outbox events. Order creation claims idempotency and stores `CREATING` before its one
+  external request, with a unique receipt and transaction/agent/mandate/service/checkout notes.
+- Added stored-order callback HMAC verification. A valid callback records immutable evidence and
+  remains non-authoritative in reconciliation.
+- Added exact-raw-byte webhook HMAC verification with previous-secret rotation support, private R2
+  retention, provider-event deduplication, fast queue dispatch, raw evidence re-hashing, and
+  retry-safe processing.
+- Added server-side reconciliation for callback-first, webhook-first, missing-callback, and
+  paid-before-captured flows. Only exact paid order plus captured payment plus amount/currency/order
+  match can become fulfilment-eligible.
+- Added replay-protected SignalWorks payment events and Gateway verification of issuer, audience,
+  signing-key lifecycle, nonce, tenant, transaction, attempt, provider IDs, and active reservation.
+- Added exactly-once payment commit/failure release, partial uniqueness for one active reservation
+  per transaction, a new order for each bounded retry, and final-attempt rejection.
+- Added disabled-by-default refund mutation and read-only provider status flags, Phase 7 migrations,
+  ADR-0023, and deterministic provider/D1/R2/queue/Gateway verification.
+- Verified `pnpm verify:phase-07`, `pnpm check`, `pnpm build`, and `git diff --check` across all
+  workspaces.
+
+Verification record: `docs/verification/phase-07.md`.
+
+### MP-0709 blocked on external credentials
+
+- Deterministic and provider-faithful Test Mode fixtures pass, but this environment has no Razorpay
+  key ID, key secret, or webhook secret and no public callback/webhook endpoint.
+- One real Test Mode success and one real failure/retry must be recorded before Phase 7's external
+  exit gate can be marked complete.
+
 ## Blockers
 
-None. Razorpay and other third-party credentials are not required until later phases.
+- MP-0709 requires SignalWorks Razorpay Test Mode credentials plus a public/tunnel callback and
+  webhook endpoint. Secrets must remain only in the SignalWorks Worker.
+- Live AI runs separately require the configured OpenAI secret; marketplace discovery, manual
+  commerce, and all deterministic Phase 5-7 verification remain available without it.
