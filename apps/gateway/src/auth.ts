@@ -7,13 +7,19 @@ import { betterAuth, type BetterAuthOptions } from "better-auth/minimal";
 export const AUTH_BASE_PATH = "/api/auth";
 
 export interface GatewayAuthBindings {
+  AGENT_MODEL_NAME?: string;
+  AGENT_MODEL_PROVIDER?: string;
+  AGENT_KEY_ENCRYPTION_KEY: string;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   DB: D1Database;
   ENVIRONMENT: string;
   MARKETPLACE_CACHE?: KVNamespace;
   MINDPAY_API_AUDIENCE?: string;
+  OPENAI_API_KEY?: string;
   PASSKEY_RP_ID: string;
+  SIGNALWORKS?: Fetcher;
+  SIGNALWORKS_MACHINE_AUTH_TOKEN?: string;
   TRUSTED_ORIGINS: string;
 }
 
