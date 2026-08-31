@@ -43,6 +43,48 @@
       "when": 1788060182871,
       "tag": "0005_marketplace_verification",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1788062416728,
+      "tag": "0006_agents",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1788068741274,
+      "tag": "0007_agent-run-evidence",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1788072775624,
+      "tag": "0008_mandate-persistence",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1788075536214,
+      "tag": "0009_phase-06-runtime",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1788076292735,
+      "tag": "0010_phase-06-challenge-retry",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1788150254550,
+      "tag": "0011_phase-07-payments",
+      "breakpoints": true
     }
   ]
 }
