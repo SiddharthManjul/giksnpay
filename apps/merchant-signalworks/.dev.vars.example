@@ -1,3 +1,10 @@
 # Generate a unique local value as documented in README.md. Never reuse this placeholder.
 SIGNALWORKS_KEY_ENCRYPTION_KEY=replace_with_32_bytes_of_unpadded_base64url
 SIGNALWORKS_MACHINE_AUTH_TOKEN=replace_with_at_least_32_printable_ascii_characters
+RAZORPAY_KEY_ID=rzp_test_replace_with_test_mode_key_id
+RAZORPAY_KEY_SECRET=replace_with_test_mode_key_secret
+RAZORPAY_WEBHOOK_SECRET=replace_with_separate_webhook_secret
+# Optional only during webhook-secret rotation:
+# RAZORPAY_WEBHOOK_OLD_SECRET=replace_with_previous_webhook_secret
+RAZORPAY_REFUNDS_ENABLED=false
+RAZORPAY_MCP_READONLY_ENABLED=false
