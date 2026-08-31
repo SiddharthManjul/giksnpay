@@ -1,6 +1,15 @@
-/**
- * Public entry point for the policy-engine package.
- *
- * Domain behavior is introduced only by the implementation phase that owns it.
- */
-export {};
+export {
+  POLICY_RULESET_VERSION,
+  evaluatePolicy,
+  type PolicyDecision,
+  type PolicyEvaluationInput,
+  type PolicyReason,
+  type PolicyReasonCode,
+} from "./policy";
+
+export {
+  assertTransactionTransition,
+  canTransitionTransaction,
+  transactionStateTransitions,
+  type TransactionState,
+} from "./transaction-state";
