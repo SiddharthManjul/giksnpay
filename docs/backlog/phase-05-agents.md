@@ -11,7 +11,7 @@ Published agents are immutable, see only approved typed tools, cannot fetch arbi
 ### MP-0501: Implement agent CRUD, immutable versions, and encrypted signing keys
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0203, MP-0104
 - Size: 1-3 engineering days
 
@@ -21,14 +21,14 @@ Create organisation-scoped agents, publish immutable versions, and store encrypt
 
 **Acceptance criteria**
 
-- [ ] Published policy/configuration/tool bindings cannot be updated in place.
-- [ ] Decryption requires the configured encryption secret and never reaches logs or clients.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Published policy/configuration/tool bindings cannot be updated in place.
+- [x] Decryption requires the configured encryption secret and never reaches logs or clients.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0502: Implement the AI model-provider abstraction
 
 - Priority: High
-- Status: Ready
+- Status: Done
 - Depends on: MP-0501
 - Size: 1-3 engineering days
 
@@ -38,14 +38,14 @@ Create typed streaming and structured-generation interfaces with one configurabl
 
 **Acceptance criteria**
 
-- [ ] Provider-specific code is isolated behind the shared interface.
-- [ ] Invalid structured output is rejected without reaching commerce orchestration.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Provider-specific code is isolated behind the shared interface.
+- [x] Invalid structured output is rejected without reaching commerce orchestration.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0503: Implement the approved tool registry and permission scopes
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0405, MP-0501
 - Size: 1-3 engineering days
 
@@ -55,14 +55,14 @@ Bind immutable tool versions and scopes to each published agent version.
 
 **Acceptance criteria**
 
-- [ ] The runtime exposes only explicitly bound tools.
-- [ ] Arbitrary URL fetch, shell, raw database, policy mutation, and payment tools are absent.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] The runtime exposes only explicitly bound tools.
+- [x] Arbitrary URL fetch, shell, raw database, policy mutation, and payment tools are absent.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0504: Implement persisted agent runs and tool-call evidence
 
 - Priority: High
-- Status: Ready
+- Status: Done
 - Depends on: MP-0502, MP-0503
 - Size: 1-3 engineering days
 
@@ -72,14 +72,14 @@ Store run state, intent and decision summaries, typed tool inputs/outputs, hashe
 
 **Acceptance criteria**
 
-- [ ] Hidden chain-of-thought is neither requested nor persisted.
-- [ ] Failed and timed-out tools close with explicit audited status.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Hidden chain-of-thought is neither requested nor persisted.
+- [x] Failed and timed-out tools close with explicit audited status.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0505: Implement the procurement agent discovery and proposal sequence
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0504
 - Size: 1-3 engineering days
 
@@ -89,14 +89,14 @@ Parse intent, search verified services, request signed offers, compare constrain
 
 **Acceptance criteria**
 
-- [ ] “Buy the best competitor research under ₹400” selects the current ₹299 offer.
-- [ ] Prompt injection in merchant text cannot select an unapproved tool or recipient.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] “Buy the best competitor research under ₹400” selects the current ₹299 offer.
+- [x] Prompt injection in merchant text cannot select an unapproved tool or recipient.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0506: Stream agent-run and transaction progress
 
 - Priority: High
-- Status: Ready
+- Status: Done
 - Depends on: MP-0504
 - Size: 1-3 engineering days
 
@@ -106,14 +106,14 @@ Expose reconnectable run events while canonical state remains server-owned.
 
 **Acceptance criteria**
 
-- [ ] Clients resume after disconnect and refetch canonical state.
-- [ ] No streamed model text can advance a transaction state.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Clients resume after disconnect and refetch canonical state.
+- [x] No streamed model text can advance a transaction state.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ### MP-0507: Implement manual commerce fallback and agent evaluations
 
 - Priority: Critical
-- Status: Ready
+- Status: Done
 - Depends on: MP-0505, MP-0506
 - Size: 1-3 engineering days
 
@@ -123,13 +123,12 @@ Allow verified manual service selection when the model provider is unavailable a
 
 **Acceptance criteria**
 
-- [ ] Manual selection reaches the same deterministic proposal contract.
-- [ ] Provider outage leaves marketplace, verification, checkout orchestration, and evidence paths usable.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] Manual selection reaches the same deterministic proposal contract.
+- [x] Provider outage leaves marketplace, verification, checkout orchestration, and evidence paths usable.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ## Phase completion
 
-- [ ] Every ticket above is Done.
-- [ ] The exit gate is demonstrated in CI or a reproducible verification record.
-- [ ] Architecture changes are recorded in `docs/adr/`.
-
+- [x] Every ticket above is Done.
+- [x] The exit gate is demonstrated in CI or a reproducible verification record.
+- [x] Architecture changes are recorded in `docs/adr/`.
