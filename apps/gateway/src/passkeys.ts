@@ -322,7 +322,7 @@ export function createPasskeyRoutes(dependencies: PasskeyRouteDependencies = {})
 
 export const passkeyRoutes = createPasskeyRoutes();
 
-function passkeyEnvironment(bindings: GatewayEnvironment["Bindings"]) {
+export function passkeyEnvironment(bindings: GatewayEnvironment["Bindings"]) {
   return parseGatewayAuthEnvironment({
     BETTER_AUTH_SECRET: bindings.BETTER_AUTH_SECRET,
     BETTER_AUTH_URL: bindings.BETTER_AUTH_URL,
@@ -332,7 +332,7 @@ function passkeyEnvironment(bindings: GatewayEnvironment["Bindings"]) {
   });
 }
 
-function trustedRequestOrigin(
+export function trustedRequestOrigin(
   request: Request,
   trustedOrigins: readonly string[],
 ): string | undefined {
@@ -351,7 +351,7 @@ function trustedRequestOrigin(
   }
 }
 
-function parseTransports(transports: readonly string[]) {
+export function parseTransports(transports: readonly string[]) {
   return authenticatorTransportSchema
     .array()
     .max(authenticatorTransportSchema.options.length)
@@ -412,7 +412,7 @@ function isDuplicateCredentialError(error: unknown): boolean {
   return false;
 }
 
-async function readJsonBody(request: Request): Promise<unknown> {
+export async function readJsonBody(request: Request): Promise<unknown> {
   try {
     return await request.json();
   } catch {
