@@ -28,3 +28,4 @@ test-results/
 # IDE
 .idea/
 .vscode/
+.gstack/
