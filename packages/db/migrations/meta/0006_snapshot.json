@@ -1,0 +1,3130 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "fa30ea95-0eb1-44a1-979d-e87045ead076",
+  "prevId": "d118a479-b4a1-4c71-b4f9-6edd222404b6",
+  "tables": {
+    "account": {
+      "name": "account",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "issuer": {
+          "name": "issuer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "access_token": {
+          "name": "access_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "refresh_token": {
+          "name": "refresh_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "access_token_expires_at": {
+          "name": "access_token_expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "refresh_token_expires_at": {
+          "name": "refresh_token_expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "id_token": {
+          "name": "id_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "account_issuer_account_id_uq": {
+          "name": "account_issuer_account_id_uq",
+          "columns": ["issuer", "account_id"],
+          "isUnique": true
+        },
+        "account_user_id_idx": {
+          "name": "account_user_id_idx",
+          "columns": ["user_id"],
+          "isUnique": false
+        },
+        "account_provider_id_idx": {
+          "name": "account_provider_id_idx",
+          "columns": ["provider_id"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "account_user_id_user_id_fk": {
+          "name": "account_user_id_user_id_fk",
+          "tableFrom": "account",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "account_identity_not_blank": {
+          "name": "account_identity_not_blank",
+          "value": "\n      length(trim(\"account\".\"issuer\")) > 0 and\n      length(trim(\"account\".\"account_id\")) > 0 and\n      length(trim(\"account\".\"provider_id\")) > 0\n    "
+        },
+        "account_updated_after_created": {
+          "name": "account_updated_after_created",
+          "value": "\"account\".\"updated_at\" >= \"account\".\"created_at\""
+        }
+      }
+    },
+    "agent_keys": {
+      "name": "agent_keys",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "agent_id": {
+          "name": "agent_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kid": {
+          "name": "kid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "public_jwk": {
+          "name": "public_jwk",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "encrypted_private_jwk": {
+          "name": "encrypted_private_jwk",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valid_from": {
+          "name": "valid_from",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "agent_keys_agent_kid_uq": {
+          "name": "agent_keys_agent_kid_uq",
+          "columns": ["agent_id", "kid"],
+          "isUnique": true
+        },
+        "agent_keys_active_idx": {
+          "name": "agent_keys_active_idx",
+          "columns": ["agent_id", "revoked_at", "valid_from"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "agent_keys_agent_id_agents_id_fk": {
+          "name": "agent_keys_agent_id_agents_id_fk",
+          "tableFrom": "agent_keys",
+          "tableTo": "agents",
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "agent_keys_id_valid": {
+          "name": "agent_keys_id_valid",
+          "value": "\"agent_keys\".\"id\" glob 'aky_*' and length(\"agent_keys\".\"id\") = 30"
+        },
+        "agent_keys_kid_valid": {
+          "name": "agent_keys_kid_valid",
+          "value": "length(\"agent_keys\".\"kid\") between 1 and 128"
+        },
+        "agent_keys_public_jwk_valid": {
+          "name": "agent_keys_public_jwk_valid",
+          "value": "\n        json_valid(\"agent_keys\".\"public_jwk\") and\n        json_extract(\"agent_keys\".\"public_jwk\", '$.kty') = 'EC' and\n        json_extract(\"agent_keys\".\"public_jwk\", '$.crv') = 'P-256' and\n        length(json_extract(\"agent_keys\".\"public_jwk\", '$.x')) = 43 and\n        length(json_extract(\"agent_keys\".\"public_jwk\", '$.y')) = 43 and\n        json_type(\"agent_keys\".\"public_jwk\", '$.d') is null\n      "
+        },
+        "agent_keys_encrypted_private_jwk_valid": {
+          "name": "agent_keys_encrypted_private_jwk_valid",
+          "value": "\n        json_valid(\"agent_keys\".\"encrypted_private_jwk\") and\n        json_extract(\"agent_keys\".\"encrypted_private_jwk\", '$.algorithm') = 'A256GCM' and\n        json_extract(\"agent_keys\".\"encrypted_private_jwk\", '$.version') = 1 and\n        length(json_extract(\"agent_keys\".\"encrypted_private_jwk\", '$.iv')) between 16 and 64 and\n        length(json_extract(\"agent_keys\".\"encrypted_private_jwk\", '$.ciphertext')) between 32 and 4096\n      "
+        },
+        "agent_keys_revocation_valid": {
+          "name": "agent_keys_revocation_valid",
+          "value": "\"agent_keys\".\"revoked_at\" is null or \"agent_keys\".\"revoked_at\" >= \"agent_keys\".\"valid_from\""
+        }
+      }
+    },
+    "agent_version_tools": {
+      "name": "agent_version_tools",
+      "columns": {
+        "agent_version_id": {
+          "name": "agent_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tool_version_id": {
+          "name": "tool_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "scope_json": {
+          "name": "scope_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "agent_version_tools_agent_version_id_agent_versions_id_fk": {
+          "name": "agent_version_tools_agent_version_id_agent_versions_id_fk",
+          "tableFrom": "agent_version_tools",
+          "tableTo": "agent_versions",
+          "columnsFrom": ["agent_version_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "agent_version_tools_agent_version_id_tool_version_id_pk": {
+          "columns": ["agent_version_id", "tool_version_id"],
+          "name": "agent_version_tools_agent_version_id_tool_version_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "agent_version_tools_tool_version_valid": {
+          "name": "agent_version_tools_tool_version_valid",
+          "value": "length(trim(\"agent_version_tools\".\"tool_version_id\")) between 1 and 128"
+        },
+        "agent_version_tools_scope_valid": {
+          "name": "agent_version_tools_scope_valid",
+          "value": "json_valid(\"agent_version_tools\".\"scope_json\")"
+        }
+      }
+    },
+    "agent_versions": {
+      "name": "agent_versions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "agent_id": {
+          "name": "agent_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version": {
+          "name": "version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "model_provider": {
+          "name": "model_provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "model_name": {
+          "name": "model_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "system_policy": {
+          "name": "system_policy",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "system_policy_hash": {
+          "name": "system_policy_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "specialization": {
+          "name": "specialization",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "configuration_json": {
+          "name": "configuration_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "verification_status": {
+          "name": "verification_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'NOT_RUN'"
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "agent_versions_agent_version_uq": {
+          "name": "agent_versions_agent_version_uq",
+          "columns": ["agent_id", "version"],
+          "isUnique": true
+        },
+        "agent_versions_agent_created_idx": {
+          "name": "agent_versions_agent_created_idx",
+          "columns": ["agent_id", "created_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "agent_versions_agent_id_agents_id_fk": {
+          "name": "agent_versions_agent_id_agents_id_fk",
+          "tableFrom": "agent_versions",
+          "tableTo": "agents",
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "agent_versions_id_valid": {
+          "name": "agent_versions_id_valid",
+          "value": "\"agent_versions\".\"id\" glob 'agv_*' and length(\"agent_versions\".\"id\") = 30"
+        },
+        "agent_versions_semantic_version_valid": {
+          "name": "agent_versions_semantic_version_valid",
+          "value": "length(\"agent_versions\".\"version\") between 5 and 64 and instr(\"agent_versions\".\"version\", '.') > 0"
+        },
+        "agent_versions_model_valid": {
+          "name": "agent_versions_model_valid",
+          "value": "length(trim(\"agent_versions\".\"model_provider\")) between 1 and 128 and length(trim(\"agent_versions\".\"model_name\")) between 1 and 128"
+        },
+        "agent_versions_policy_valid": {
+          "name": "agent_versions_policy_valid",
+          "value": "length(trim(\"agent_versions\".\"system_policy\")) between 20 and 20000"
+        },
+        "agent_versions_policy_hash_valid": {
+          "name": "agent_versions_policy_hash_valid",
+          "value": "length(\"agent_versions\".\"system_policy_hash\") = 64 and \"agent_versions\".\"system_policy_hash\" not glob '*[^0-9a-f]*'"
+        },
+        "agent_versions_specialization_valid": {
+          "name": "agent_versions_specialization_valid",
+          "value": "length(trim(\"agent_versions\".\"specialization\")) between 2 and 160"
+        },
+        "agent_versions_configuration_valid": {
+          "name": "agent_versions_configuration_valid",
+          "value": "json_valid(\"agent_versions\".\"configuration_json\")"
+        },
+        "agent_versions_verification_status_valid": {
+          "name": "agent_versions_verification_status_valid",
+          "value": "\"agent_versions\".\"verification_status\" in ('NOT_RUN', 'PASSED', 'FAILED')"
+        },
+        "agent_versions_publication_valid": {
+          "name": "agent_versions_publication_valid",
+          "value": "\"agent_versions\".\"published_at\" is null or \"agent_versions\".\"published_at\" >= \"agent_versions\".\"created_at\""
+        }
+      }
+    },
+    "agents": {
+      "name": "agents",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'ACTIVE'"
+        },
+        "current_version_id": {
+          "name": "current_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "agents_organization_slug_uq": {
+          "name": "agents_organization_slug_uq",
+          "columns": ["organization_id", "lower(\"slug\")"],
+          "isUnique": true
+        },
+        "agents_organization_status_idx": {
+          "name": "agents_organization_status_idx",
+          "columns": ["organization_id", "status"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "agents_organization_id_organizations_id_fk": {
+          "name": "agents_organization_id_organizations_id_fk",
+          "tableFrom": "agents",
+          "tableTo": "organizations",
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        },
+        "agents_created_by_user_id_fk": {
+          "name": "agents_created_by_user_id_fk",
+          "tableFrom": "agents",
+          "tableTo": "user",
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "agents_id_valid": {
+          "name": "agents_id_valid",
+          "value": "\"agents\".\"id\" glob 'agt_*' and length(\"agents\".\"id\") = 30"
+        },
+        "agents_name_valid": {
+          "name": "agents_name_valid",
+          "value": "length(trim(\"agents\".\"name\")) between 2 and 120"
+        },
+        "agents_slug_format": {
+          "name": "agents_slug_format",
+          "value": "\n        length(\"agents\".\"slug\") between 3 and 63 and\n        \"agents\".\"slug\" = lower(\"agents\".\"slug\") and\n        \"agents\".\"slug\" not glob '*[^a-z0-9-]*' and\n        substr(\"agents\".\"slug\", 1, 1) != '-' and\n        substr(\"agents\".\"slug\", -1, 1) != '-'\n      "
+        },
+        "agents_description_valid": {
+          "name": "agents_description_valid",
+          "value": "length(trim(\"agents\".\"description\")) between 10 and 2000"
+        },
+        "agents_status_valid": {
+          "name": "agents_status_valid",
+          "value": "\"agents\".\"status\" in ('ACTIVE', 'ARCHIVED')"
+        },
+        "agents_updated_after_created": {
+          "name": "agents_updated_after_created",
+          "value": "\"agents\".\"updated_at\" >= \"agents\".\"created_at\""
+        }
+      }
+    },
+    "approval_challenges": {
+      "name": "approval_challenges",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "transaction_id": {
+          "name": "transaction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "challenge_hash": {
+          "name": "challenge_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload_hash": {
+          "name": "payload_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'PENDING'"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "consumed_at": {
+          "name": "consumed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "approval_challenges_hash_uq": {
+          "name": "approval_challenges_hash_uq",
+          "columns": ["challenge_hash"],
+          "isUnique": true
+        },
+        "approval_challenges_user_state_idx": {
+          "name": "approval_challenges_user_state_idx",
+          "columns": ["user_id", "state"],
+          "isUnique": false
+        },
+        "approval_challenges_expires_at_idx": {
+          "name": "approval_challenges_expires_at_idx",
+          "columns": ["expires_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "approval_challenges_organization_id_organizations_id_fk": {
+          "name": "approval_challenges_organization_id_organizations_id_fk",
+          "tableFrom": "approval_challenges",
+          "tableTo": "organizations",
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "approval_challenges_user_id_user_id_fk": {
+          "name": "approval_challenges_user_id_user_id_fk",
+          "tableFrom": "approval_challenges",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "approval_challenges_purpose_valid": {
+          "name": "approval_challenges_purpose_valid",
+          "value": "\"approval_challenges\".\"purpose\" in ('MANDATE_ACTIVATION', 'TRANSACTION_STEP_UP')"
+        },
+        "approval_challenges_state_valid": {
+          "name": "approval_challenges_state_valid",
+          "value": "\"approval_challenges\".\"state\" in ('PENDING', 'CONSUMED', 'EXPIRED', 'CANCELLED')"
+        },
+        "approval_challenges_challenge_hash_valid": {
+          "name": "approval_challenges_challenge_hash_valid",
+          "value": "length(\"approval_challenges\".\"challenge_hash\") = 64 and \"approval_challenges\".\"challenge_hash\" not glob '*[^0-9a-f]*'"
+        },
+        "approval_challenges_payload_hash_valid": {
+          "name": "approval_challenges_payload_hash_valid",
+          "value": "length(\"approval_challenges\".\"payload_hash\") = 64 and \"approval_challenges\".\"payload_hash\" not glob '*[^0-9a-f]*'"
+        },
+        "approval_challenges_expires_after_created": {
+          "name": "approval_challenges_expires_after_created",
+          "value": "\"approval_challenges\".\"expires_at\" > \"approval_challenges\".\"created_at\""
+        },
+        "approval_challenges_consumption_valid": {
+          "name": "approval_challenges_consumption_valid",
+          "value": "\n        (\"approval_challenges\".\"state\" = 'CONSUMED' and \"approval_challenges\".\"consumed_at\" is not null and \"approval_challenges\".\"consumed_at\" >= \"approval_challenges\".\"created_at\") or\n        (\"approval_challenges\".\"state\" != 'CONSUMED' and \"approval_challenges\".\"consumed_at\" is null)\n      "
+        }
+      }
+    },
+    "audit_events": {
+      "name": "audit_events",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "transaction_id": {
+          "name": "transaction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "schema_version": {
+          "name": "schema_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "actor_type": {
+          "name": "actor_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "issuer": {
+          "name": "issuer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "audience": {
+          "name": "audience",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "jti": {
+          "name": "jti",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload_json": {
+          "name": "payload_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload_hash": {
+          "name": "payload_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "previous_event_hash": {
+          "name": "previous_event_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "event_hash": {
+          "name": "event_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "signature": {
+          "name": "signature",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kid": {
+          "name": "kid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "audit_events_transaction_sequence_uq": {
+          "name": "audit_events_transaction_sequence_uq",
+          "columns": ["transaction_id", "sequence"],
+          "isUnique": true
+        },
+        "audit_events_event_hash_uq": {
+          "name": "audit_events_event_hash_uq",
+          "columns": ["event_hash"],
+          "isUnique": true
+        },
+        "audit_events_jti_uq": {
+          "name": "audit_events_jti_uq",
+          "columns": ["jti"],
+          "isUnique": true
+        },
+        "audit_events_created_at_idx": {
+          "name": "audit_events_created_at_idx",
+          "columns": ["created_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "audit_events_sequence_nonnegative": {
+          "name": "audit_events_sequence_nonnegative",
+          "value": "\"audit_events\".\"sequence\" >= 0"
+        },
+        "audit_events_schema_version_valid": {
+          "name": "audit_events_schema_version_valid",
+          "value": "\"audit_events\".\"schema_version\" = 'mindpay.audit.event.1'"
+        },
+        "audit_events_payload_hash_valid": {
+          "name": "audit_events_payload_hash_valid",
+          "value": "length(\"audit_events\".\"payload_hash\") = 64 and \"audit_events\".\"payload_hash\" not glob '*[^0-9a-f]*'"
+        },
+        "audit_events_previous_hash_valid": {
+          "name": "audit_events_previous_hash_valid",
+          "value": "\"audit_events\".\"previous_event_hash\" is null or (length(\"audit_events\".\"previous_event_hash\") = 64 and \"audit_events\".\"previous_event_hash\" not glob '*[^0-9a-f]*')"
+        },
+        "audit_events_event_hash_valid": {
+          "name": "audit_events_event_hash_valid",
+          "value": "length(\"audit_events\".\"event_hash\") = 64 and \"audit_events\".\"event_hash\" not glob '*[^0-9a-f]*'"
+        },
+        "audit_events_chain_root_valid": {
+          "name": "audit_events_chain_root_valid",
+          "value": "\n        (\"audit_events\".\"sequence\" = 0 and \"audit_events\".\"previous_event_hash\" is null) or\n        (\"audit_events\".\"sequence\" > 0 and \"audit_events\".\"previous_event_hash\" is not null)\n      "
+        },
+        "audit_events_occurrence_valid": {
+          "name": "audit_events_occurrence_valid",
+          "value": "\"audit_events\".\"occurred_at\" = \"audit_events\".\"created_at\""
+        },
+        "audit_events_expires_after_occurrence": {
+          "name": "audit_events_expires_after_occurrence",
+          "value": "\"audit_events\".\"expires_at\" > \"audit_events\".\"occurred_at\""
+        }
+      }
+    },
+    "demo_workspaces": {
+      "name": "demo_workspaces",
+      "columns": {
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "demo_workspaces_expires_at_idx": {
+          "name": "demo_workspaces_expires_at_idx",
+          "columns": ["expires_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "demo_workspaces_organization_id_organizations_id_fk": {
+          "name": "demo_workspaces_organization_id_organizations_id_fk",
+          "tableFrom": "demo_workspaces",
+          "tableTo": "organizations",
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "demo_workspaces_expiry_valid": {
+          "name": "demo_workspaces_expiry_valid",
+          "value": "\"demo_workspaces\".\"expires_at\" > \"demo_workspaces\".\"created_at\""
+        }
+      }
+    },
+    "idempotency_records": {
+      "name": "idempotency_records",
+      "columns": {
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "request_hash": {
+          "name": "request_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "response_status": {
+          "name": "response_status",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "response_body": {
+          "name": "response_body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'PENDING'"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "idempotency_records_expires_at_idx": {
+          "name": "idempotency_records_expires_at_idx",
+          "columns": ["expires_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "idempotency_records_scope_key_pk": {
+          "columns": ["scope", "key"],
+          "name": "idempotency_records_scope_key_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "idempotency_records_scope_not_blank": {
+          "name": "idempotency_records_scope_not_blank",
+          "value": "length(trim(\"idempotency_records\".\"scope\")) between 1 and 128"
+        },
+        "idempotency_records_key_valid": {
+          "name": "idempotency_records_key_valid",
+          "value": "length(\"idempotency_records\".\"key\") between 16 and 128"
+        },
+        "idempotency_records_request_hash_valid": {
+          "name": "idempotency_records_request_hash_valid",
+          "value": "length(\"idempotency_records\".\"request_hash\") = 64 and \"idempotency_records\".\"request_hash\" not glob '*[^0-9a-f]*'"
+        },
+        "idempotency_records_state_valid": {
+          "name": "idempotency_records_state_valid",
+          "value": "\"idempotency_records\".\"state\" in ('PENDING', 'COMPLETED', 'FAILED')"
+        },
+        "idempotency_records_response_status_valid": {
+          "name": "idempotency_records_response_status_valid",
+          "value": "\"idempotency_records\".\"response_status\" is null or \"idempotency_records\".\"response_status\" between 100 and 599"
+        },
+        "idempotency_records_response_state_valid": {
+          "name": "idempotency_records_response_state_valid",
+          "value": "\n        (\"idempotency_records\".\"state\" = 'PENDING' and \"idempotency_records\".\"response_status\" is null and \"idempotency_records\".\"response_body\" is null) or\n        (\"idempotency_records\".\"state\" != 'PENDING' and \"idempotency_records\".\"response_status\" is not null and \"idempotency_records\".\"response_body\" is not null)\n      "
+        },
+        "idempotency_records_expires_after_created": {
+          "name": "idempotency_records_expires_after_created",
+          "value": "\"idempotency_records\".\"expires_at\" > \"idempotency_records\".\"created_at\""
+        }
+      }
+    },
+    "marketplace_cache_versions": {
+      "name": "marketplace_cache_versions",
+      "columns": {
+        "namespace": {
+          "name": "namespace",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "generation": {
+          "name": "generation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "marketplace_cache_versions_namespace_valid": {
+          "name": "marketplace_cache_versions_namespace_valid",
+          "value": "\"marketplace_cache_versions\".\"namespace\" = 'services'"
+        },
+        "marketplace_cache_versions_generation_valid": {
+          "name": "marketplace_cache_versions_generation_valid",
+          "value": "length(\"marketplace_cache_versions\".\"generation\") = 64 and \"marketplace_cache_versions\".\"generation\" not glob '*[^0-9a-f]*'"
+        }
+      }
+    },
+    "merchant_admin_events": {
+      "name": "merchant_admin_events",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "merchant_id": {
+          "name": "merchant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "request_hash": {
+          "name": "request_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "previous_verification_status": {
+          "name": "previous_verification_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "next_verification_status": {
+          "name": "next_verification_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "details_json": {
+          "name": "details_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "merchant_admin_events_idempotency_uq": {
+          "name": "merchant_admin_events_idempotency_uq",
+          "columns": ["organization_id", "actor_id", "action", "idempotency_key"],
+          "isUnique": true
+        },
+        "merchant_admin_events_merchant_time_idx": {
+          "name": "merchant_admin_events_merchant_time_idx",
+          "columns": ["merchant_id", "occurred_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "merchant_admin_events_merchant_id_merchants_id_fk": {
+          "name": "merchant_admin_events_merchant_id_merchants_id_fk",
+          "tableFrom": "merchant_admin_events",
+          "tableTo": "merchants",
+          "columnsFrom": ["merchant_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "merchant_admin_events_organization_id_organizations_id_fk": {
+          "name": "merchant_admin_events_organization_id_organizations_id_fk",
+          "tableFrom": "merchant_admin_events",
+          "tableTo": "organizations",
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        },
+        "merchant_admin_events_actor_id_user_id_fk": {
+          "name": "merchant_admin_events_actor_id_user_id_fk",
+          "tableFrom": "merchant_admin_events",
+          "tableTo": "user",
+          "columnsFrom": ["actor_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "merchant_admin_events_request_hash_valid": {
+          "name": "merchant_admin_events_request_hash_valid",
+          "value": "length(\"merchant_admin_events\".\"request_hash\") = 64 and \"merchant_admin_events\".\"request_hash\" not glob '*[^0-9a-f]*'"
+        },
+        "merchant_admin_events_details_valid": {
+          "name": "merchant_admin_events_details_valid",
+          "value": "json_valid(\"merchant_admin_events\".\"details_json\")"
+        }
+      }
+    },
+    "merchant_catalogs": {
+      "name": "merchant_catalogs",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "merchant_id": {
+          "name": "merchant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version": {
+          "name": "version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "catalog_hash": {
+          "name": "catalog_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "catalog_json": {
+          "name": "catalog_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "signature": {
+          "name": "signature",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "verified_at": {
+          "name": "verified_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "merchant_catalogs_version_hash_uq": {
+          "name": "merchant_catalogs_version_hash_uq",
+          "columns": ["merchant_id", "version", "catalog_hash"],
+          "isUnique": true
+        },
+        "merchant_catalogs_merchant_verified_idx": {
+          "name": "merchant_catalogs_merchant_verified_idx",
+          "columns": ["merchant_id", "verified_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "merchant_catalogs_merchant_id_merchants_id_fk": {
+          "name": "merchant_catalogs_merchant_id_merchants_id_fk",
+          "tableFrom": "merchant_catalogs",
+          "tableTo": "merchants",
+          "columnsFrom": ["merchant_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "merchant_catalogs_hash_valid": {
+          "name": "merchant_catalogs_hash_valid",
+          "value": "length(\"merchant_catalogs\".\"catalog_hash\") = 64 and \"merchant_catalogs\".\"catalog_hash\" not glob '*[^0-9a-f]*'"
+        },
+        "merchant_catalogs_json_valid": {
+          "name": "merchant_catalogs_json_valid",
+          "value": "json_valid(\"merchant_catalogs\".\"catalog_json\") and json_valid(\"merchant_catalogs\".\"signature\")"
+        },
+        "merchant_catalogs_expiry_valid": {
+          "name": "merchant_catalogs_expiry_valid",
+          "value": "\"merchant_catalogs\".\"expires_at\" > \"merchant_catalogs\".\"verified_at\""
+        }
+      }
+    },
+    "merchant_keys": {
+      "name": "merchant_keys",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "merchant_id": {
+          "name": "merchant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kid": {
+          "name": "kid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "public_jwk": {
+          "name": "public_jwk",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "fingerprint": {
+          "name": "fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valid_from": {
+          "name": "valid_from",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valid_until": {
+          "name": "valid_until",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "merchant_keys_identity_uq": {
+          "name": "merchant_keys_identity_uq",
+          "columns": ["merchant_id", "kid", "purpose", "fingerprint"],
+          "isUnique": true
+        },
+        "merchant_keys_active_idx": {
+          "name": "merchant_keys_active_idx",
+          "columns": ["merchant_id", "purpose", "revoked_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "merchant_keys_merchant_id_merchants_id_fk": {
+          "name": "merchant_keys_merchant_id_merchants_id_fk",
+          "tableFrom": "merchant_keys",
+          "tableTo": "merchants",
+          "columnsFrom": ["merchant_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "merchant_keys_fingerprint_valid": {
+          "name": "merchant_keys_fingerprint_valid",
+          "value": "length(\"merchant_keys\".\"fingerprint\") = 64 and \"merchant_keys\".\"fingerprint\" not glob '*[^0-9a-f]*'"
+        },
+        "merchant_keys_public_jwk_valid": {
+          "name": "merchant_keys_public_jwk_valid",
+          "value": "json_valid(\"merchant_keys\".\"public_jwk\")"
+        },
+        "merchant_keys_purpose_valid": {
+          "name": "merchant_keys_purpose_valid",
+          "value": "\"merchant_keys\".\"purpose\" in ('manifest', 'catalog', 'checkout', 'event')"
+        }
+      }
+    },
+    "merchant_manifests": {
+      "name": "merchant_manifests",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "merchant_id": {
+          "name": "merchant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "schema_version": {
+          "name": "schema_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "manifest_json": {
+          "name": "manifest_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "manifest_hash": {
+          "name": "manifest_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "signature": {
+          "name": "signature",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "verified_at": {
+          "name": "verified_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "merchant_manifests_hash_uq": {
+          "name": "merchant_manifests_hash_uq",
+          "columns": ["merchant_id", "manifest_hash"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "merchant_manifests_merchant_id_merchants_id_fk": {
+          "name": "merchant_manifests_merchant_id_merchants_id_fk",
+          "tableFrom": "merchant_manifests",
+          "tableTo": "merchants",
+          "columnsFrom": ["merchant_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "merchant_manifests_hash_valid": {
+          "name": "merchant_manifests_hash_valid",
+          "value": "length(\"merchant_manifests\".\"manifest_hash\") = 64 and \"merchant_manifests\".\"manifest_hash\" not glob '*[^0-9a-f]*'"
+        },
+        "merchant_manifests_json_valid": {
+          "name": "merchant_manifests_json_valid",
+          "value": "json_valid(\"merchant_manifests\".\"manifest_json\") and json_valid(\"merchant_manifests\".\"signature\")"
+        },
+        "merchant_manifests_expiry_valid": {
+          "name": "merchant_manifests_expiry_valid",
+          "value": "\"merchant_manifests\".\"expires_at\" > \"merchant_manifests\".\"verified_at\""
+        }
+      }
+    },
+    "merchant_verifications": {
+      "name": "merchant_verifications",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "merchant_id": {
+          "name": "merchant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "check_type": {
+          "name": "check_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "evidence_json": {
+          "name": "evidence_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "checked_at": {
+          "name": "checked_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "merchant_verifications_run_check_uq": {
+          "name": "merchant_verifications_run_check_uq",
+          "columns": ["run_id", "check_type"],
+          "isUnique": true
+        },
+        "merchant_verifications_merchant_checked_idx": {
+          "name": "merchant_verifications_merchant_checked_idx",
+          "columns": ["merchant_id", "checked_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "merchant_verifications_merchant_id_merchants_id_fk": {
+          "name": "merchant_verifications_merchant_id_merchants_id_fk",
+          "tableFrom": "merchant_verifications",
+          "tableTo": "merchants",
+          "columnsFrom": ["merchant_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "merchant_verifications_status_valid": {
+          "name": "merchant_verifications_status_valid",
+          "value": "\"merchant_verifications\".\"status\" in ('PASS', 'FAIL')"
+        },
+        "merchant_verifications_evidence_valid": {
+          "name": "merchant_verifications_evidence_valid",
+          "value": "json_valid(\"merchant_verifications\".\"evidence_json\")"
+        },
+        "merchant_verifications_result_valid": {
+          "name": "merchant_verifications_result_valid",
+          "value": "(\"merchant_verifications\".\"status\" = 'PASS' and \"merchant_verifications\".\"reason\" is null) or (\"merchant_verifications\".\"status\" = 'FAIL' and \"merchant_verifications\".\"reason\" is not null)"
+        },
+        "merchant_verifications_expiry_valid": {
+          "name": "merchant_verifications_expiry_valid",
+          "value": "\"merchant_verifications\".\"expires_at\" > \"merchant_verifications\".\"checked_at\""
+        }
+      }
+    },
+    "merchants": {
+      "name": "merchants",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "legal_name": {
+          "name": "legal_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "domain": {
+          "name": "domain",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'ACTIVE'"
+        },
+        "verification_status": {
+          "name": "verification_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'SUBMITTED'"
+        },
+        "risk_tier": {
+          "name": "risk_tier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'LOW'"
+        },
+        "verification_tier": {
+          "name": "verification_tier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'NONE'"
+        },
+        "current_manifest_id": {
+          "name": "current_manifest_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "current_catalog_id": {
+          "name": "current_catalog_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_admin_event_id": {
+          "name": "last_admin_event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_verification_at": {
+          "name": "last_verification_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "verification_expires_at": {
+          "name": "verification_expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "quarantined_at": {
+          "name": "quarantined_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "merchants_domain_uq": {
+          "name": "merchants_domain_uq",
+          "columns": ["lower(\"domain\")"],
+          "isUnique": true
+        },
+        "merchants_slug_uq": {
+          "name": "merchants_slug_uq",
+          "columns": ["lower(\"slug\")"],
+          "isUnique": true
+        },
+        "merchants_discovery_idx": {
+          "name": "merchants_discovery_idx",
+          "columns": ["status", "verification_status"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "merchants_organization_id_organizations_id_fk": {
+          "name": "merchants_organization_id_organizations_id_fk",
+          "tableFrom": "merchants",
+          "tableTo": "organizations",
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "merchants_id_valid": {
+          "name": "merchants_id_valid",
+          "value": "\"merchants\".\"id\" glob 'merchant_*' and length(\"merchants\".\"id\") between 12 and 96"
+        },
+        "merchants_name_valid": {
+          "name": "merchants_name_valid",
+          "value": "length(trim(\"merchants\".\"name\")) between 2 and 120"
+        },
+        "merchants_legal_name_valid": {
+          "name": "merchants_legal_name_valid",
+          "value": "length(trim(\"merchants\".\"legal_name\")) between 2 and 160"
+        },
+        "merchants_domain_valid": {
+          "name": "merchants_domain_valid",
+          "value": "\"merchants\".\"domain\" = lower(\"merchants\".\"domain\") and instr(\"merchants\".\"domain\", '.') > 0"
+        },
+        "merchants_status_valid": {
+          "name": "merchants_status_valid",
+          "value": "\"merchants\".\"status\" in ('ACTIVE', 'SUSPENDED', 'REVOKED')"
+        },
+        "merchants_verification_status_valid": {
+          "name": "merchants_verification_status_valid",
+          "value": "\"merchants\".\"verification_status\" in ('SUBMITTED', 'DOMAIN_VERIFIED', 'KEY_VERIFIED', 'CATALOG_VALIDATED', 'PAYMENT_CONFIGURATION_VERIFIED', 'APPROVED', 'REVIEW_REQUIRED', 'QUARANTINED')"
+        },
+        "merchants_risk_tier_valid": {
+          "name": "merchants_risk_tier_valid",
+          "value": "\"merchants\".\"risk_tier\" in ('LOW', 'MEDIUM', 'HIGH')"
+        },
+        "merchants_verification_tier_valid": {
+          "name": "merchants_verification_tier_valid",
+          "value": "\"merchants\".\"verification_tier\" in ('NONE', 'TEST_VERIFIED')"
+        },
+        "merchants_revision_valid": {
+          "name": "merchants_revision_valid",
+          "value": "\"merchants\".\"revision\" >= 0"
+        },
+        "merchants_verification_expiry_valid": {
+          "name": "merchants_verification_expiry_valid",
+          "value": "\"merchants\".\"verification_expires_at\" is null or (\"merchants\".\"last_verification_at\" is not null and \"merchants\".\"verification_expires_at\" > \"merchants\".\"last_verification_at\")"
+        },
+        "merchants_updated_after_created": {
+          "name": "merchants_updated_after_created",
+          "value": "\"merchants\".\"updated_at\" >= \"merchants\".\"created_at\""
+        }
+      }
+    },
+    "organization_members": {
+      "name": "organization_members",
+      "columns": {
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "organization_members_user_id_idx": {
+          "name": "organization_members_user_id_idx",
+          "columns": ["user_id"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "organization_members_organization_id_organizations_id_fk": {
+          "name": "organization_members_organization_id_organizations_id_fk",
+          "tableFrom": "organization_members",
+          "tableTo": "organizations",
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "organization_members_user_id_user_id_fk": {
+          "name": "organization_members_user_id_user_id_fk",
+          "tableFrom": "organization_members",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "organization_members_organization_id_user_id_pk": {
+          "columns": ["organization_id", "user_id"],
+          "name": "organization_members_organization_id_user_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "organization_members_role_valid": {
+          "name": "organization_members_role_valid",
+          "value": "\"organization_members\".\"role\" in ('OWNER', 'ADMIN', 'BUILDER', 'REVIEWER', 'VIEWER')"
+        }
+      }
+    },
+    "organizations": {
+      "name": "organizations",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'ACTIVE'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "organizations_slug_uq": {
+          "name": "organizations_slug_uq",
+          "columns": ["lower(\"slug\")"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "organizations_name_not_blank": {
+          "name": "organizations_name_not_blank",
+          "value": "length(trim(\"organizations\".\"name\")) between 1 and 128"
+        },
+        "organizations_slug_format": {
+          "name": "organizations_slug_format",
+          "value": "\n        length(\"organizations\".\"slug\") between 3 and 63 and\n        \"organizations\".\"slug\" = lower(\"organizations\".\"slug\") and\n        \"organizations\".\"slug\" not glob '*[^a-z0-9-]*' and\n        substr(\"organizations\".\"slug\", 1, 1) != '-' and\n        substr(\"organizations\".\"slug\", -1, 1) != '-'\n      "
+        },
+        "organizations_status_valid": {
+          "name": "organizations_status_valid",
+          "value": "\"organizations\".\"status\" in ('ACTIVE', 'SUSPENDED', 'EXPIRED')"
+        },
+        "organizations_updated_after_created": {
+          "name": "organizations_updated_after_created",
+          "value": "\"organizations\".\"updated_at\" >= \"organizations\".\"created_at\""
+        }
+      }
+    },
+    "passkey_credentials": {
+      "name": "passkey_credentials",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "credential_id": {
+          "name": "credential_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "public_key": {
+          "name": "public_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "webauthn_user_id": {
+          "name": "webauthn_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "counter": {
+          "name": "counter",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "device_type": {
+          "name": "device_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "backed_up": {
+          "name": "backed_up",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "transports": {
+          "name": "transports",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "aaguid": {
+          "name": "aaguid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "passkey_credentials_credential_id_uq": {
+          "name": "passkey_credentials_credential_id_uq",
+          "columns": ["credential_id"],
+          "isUnique": true
+        },
+        "passkey_credentials_user_id_idx": {
+          "name": "passkey_credentials_user_id_idx",
+          "columns": ["user_id"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "passkey_credentials_user_id_user_id_fk": {
+          "name": "passkey_credentials_user_id_user_id_fk",
+          "tableFrom": "passkey_credentials",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "passkey_credentials_name_valid": {
+          "name": "passkey_credentials_name_valid",
+          "value": "\"passkey_credentials\".\"name\" is null or length(trim(\"passkey_credentials\".\"name\")) between 1 and 64"
+        },
+        "passkey_credentials_credential_id_valid": {
+          "name": "passkey_credentials_credential_id_valid",
+          "value": "length(\"passkey_credentials\".\"credential_id\") between 1 and 1024"
+        },
+        "passkey_credentials_public_key_valid": {
+          "name": "passkey_credentials_public_key_valid",
+          "value": "length(\"passkey_credentials\".\"public_key\") between 1 and 4096"
+        },
+        "passkey_credentials_webauthn_user_id_valid": {
+          "name": "passkey_credentials_webauthn_user_id_valid",
+          "value": "length(\"passkey_credentials\".\"webauthn_user_id\") between 1 and 128"
+        },
+        "passkey_credentials_counter_valid": {
+          "name": "passkey_credentials_counter_valid",
+          "value": "\"passkey_credentials\".\"counter\" >= 0"
+        },
+        "passkey_credentials_device_type_valid": {
+          "name": "passkey_credentials_device_type_valid",
+          "value": "\"passkey_credentials\".\"device_type\" in ('singleDevice', 'multiDevice')"
+        },
+        "passkey_credentials_transports_valid": {
+          "name": "passkey_credentials_transports_valid",
+          "value": "json_valid(\"passkey_credentials\".\"transports\")"
+        },
+        "passkey_credentials_aaguid_valid": {
+          "name": "passkey_credentials_aaguid_valid",
+          "value": "length(\"passkey_credentials\".\"aaguid\") between 1 and 64"
+        },
+        "passkey_credentials_updated_after_created": {
+          "name": "passkey_credentials_updated_after_created",
+          "value": "\"passkey_credentials\".\"updated_at\" >= \"passkey_credentials\".\"created_at\""
+        }
+      }
+    },
+    "passkey_registration_challenges": {
+      "name": "passkey_registration_challenges",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "challenge_hash": {
+          "name": "challenge_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "webauthn_user_id": {
+          "name": "webauthn_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "rp_id": {
+          "name": "rp_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "origin": {
+          "name": "origin",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "consumed_at": {
+          "name": "consumed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "passkey_registration_challenges_hash_uq": {
+          "name": "passkey_registration_challenges_hash_uq",
+          "columns": ["challenge_hash"],
+          "isUnique": true
+        },
+        "passkey_registration_challenges_session_idx": {
+          "name": "passkey_registration_challenges_session_idx",
+          "columns": ["session_id"],
+          "isUnique": false
+        },
+        "passkey_registration_challenges_user_idx": {
+          "name": "passkey_registration_challenges_user_idx",
+          "columns": ["user_id"],
+          "isUnique": false
+        },
+        "passkey_registration_challenges_expires_at_idx": {
+          "name": "passkey_registration_challenges_expires_at_idx",
+          "columns": ["expires_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "passkey_registration_challenges_session_id_session_id_fk": {
+          "name": "passkey_registration_challenges_session_id_session_id_fk",
+          "tableFrom": "passkey_registration_challenges",
+          "tableTo": "session",
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "passkey_registration_challenges_user_id_user_id_fk": {
+          "name": "passkey_registration_challenges_user_id_user_id_fk",
+          "tableFrom": "passkey_registration_challenges",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "passkey_registration_challenges_hash_valid": {
+          "name": "passkey_registration_challenges_hash_valid",
+          "value": "length(\"passkey_registration_challenges\".\"challenge_hash\") = 64 and \"passkey_registration_challenges\".\"challenge_hash\" not glob '*[^0-9a-f]*'"
+        },
+        "passkey_registration_challenges_webauthn_user_id_valid": {
+          "name": "passkey_registration_challenges_webauthn_user_id_valid",
+          "value": "length(\"passkey_registration_challenges\".\"webauthn_user_id\") between 1 and 128"
+        },
+        "passkey_registration_challenges_rp_id_valid": {
+          "name": "passkey_registration_challenges_rp_id_valid",
+          "value": "length(\"passkey_registration_challenges\".\"rp_id\") between 1 and 253"
+        },
+        "passkey_registration_challenges_origin_valid": {
+          "name": "passkey_registration_challenges_origin_valid",
+          "value": "length(\"passkey_registration_challenges\".\"origin\") between 8 and 2048"
+        },
+        "passkey_registration_challenges_expires_after_created": {
+          "name": "passkey_registration_challenges_expires_after_created",
+          "value": "\"passkey_registration_challenges\".\"expires_at\" > \"passkey_registration_challenges\".\"created_at\""
+        },
+        "passkey_registration_challenges_consumed_after_created": {
+          "name": "passkey_registration_challenges_consumed_after_created",
+          "value": "\"passkey_registration_challenges\".\"consumed_at\" is null or \"passkey_registration_challenges\".\"consumed_at\" >= \"passkey_registration_challenges\".\"created_at\""
+        }
+      }
+    },
+    "rate_limit": {
+      "name": "rate_limit",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_request": {
+          "name": "last_request",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "rate_limit_key_uq": {
+          "name": "rate_limit_key_uq",
+          "columns": ["key"],
+          "isUnique": true
+        },
+        "rate_limit_last_request_idx": {
+          "name": "rate_limit_last_request_idx",
+          "columns": ["last_request"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "rate_limit_key_not_blank": {
+          "name": "rate_limit_key_not_blank",
+          "value": "length(trim(\"rate_limit\".\"key\")) between 1 and 1024"
+        },
+        "rate_limit_count_positive": {
+          "name": "rate_limit_count_positive",
+          "value": "\"rate_limit\".\"count\" >= 1"
+        },
+        "rate_limit_last_request_positive": {
+          "name": "rate_limit_last_request_positive",
+          "value": "\"rate_limit\".\"last_request\" > 0"
+        }
+      }
+    },
+    "replay_nonces": {
+      "name": "replay_nonces",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "nonce": {
+          "name": "nonce",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "subject_id": {
+          "name": "subject_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "payload_hash": {
+          "name": "payload_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "consumed_at": {
+          "name": "consumed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "replay_nonces_scope_nonce_uq": {
+          "name": "replay_nonces_scope_nonce_uq",
+          "columns": ["scope", "nonce"],
+          "isUnique": true
+        },
+        "replay_nonces_expires_at_idx": {
+          "name": "replay_nonces_expires_at_idx",
+          "columns": ["expires_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "replay_nonces_scope_not_blank": {
+          "name": "replay_nonces_scope_not_blank",
+          "value": "length(trim(\"replay_nonces\".\"scope\")) between 1 and 128"
+        },
+        "replay_nonces_nonce_not_blank": {
+          "name": "replay_nonces_nonce_not_blank",
+          "value": "length(\"replay_nonces\".\"nonce\") between 8 and 512"
+        },
+        "replay_nonces_payload_hash_valid": {
+          "name": "replay_nonces_payload_hash_valid",
+          "value": "length(\"replay_nonces\".\"payload_hash\") = 64 and \"replay_nonces\".\"payload_hash\" not glob '*[^0-9a-f]*'"
+        },
+        "replay_nonces_expires_after_created": {
+          "name": "replay_nonces_expires_after_created",
+          "value": "\"replay_nonces\".\"expires_at\" > \"replay_nonces\".\"created_at\""
+        },
+        "replay_nonces_consumed_after_created": {
+          "name": "replay_nonces_consumed_after_created",
+          "value": "\"replay_nonces\".\"consumed_at\" >= \"replay_nonces\".\"created_at\""
+        }
+      }
+    },
+    "service_versions": {
+      "name": "service_versions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version": {
+          "name": "version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "price_subunits": {
+          "name": "price_subunits",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "availability": {
+          "name": "availability",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "fulfilment_type": {
+          "name": "fulfilment_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "fulfilment_tool_id": {
+          "name": "fulfilment_tool_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "estimated_delivery_seconds": {
+          "name": "estimated_delivery_seconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "privacy_url": {
+          "name": "privacy_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "terms_url": {
+          "name": "terms_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "catalog_hash": {
+          "name": "catalog_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "verified_at": {
+          "name": "verified_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "service_versions_identity_uq": {
+          "name": "service_versions_identity_uq",
+          "columns": ["service_id", "version"],
+          "isUnique": true
+        },
+        "service_versions_marketplace_idx": {
+          "name": "service_versions_marketplace_idx",
+          "columns": ["availability", "price_subunits"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "service_versions_service_id_services_id_fk": {
+          "name": "service_versions_service_id_services_id_fk",
+          "tableFrom": "service_versions",
+          "tableTo": "services",
+          "columnsFrom": ["service_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "service_versions_price_valid": {
+          "name": "service_versions_price_valid",
+          "value": "typeof(\"service_versions\".\"price_subunits\") = 'integer' and \"service_versions\".\"price_subunits\" >= 0"
+        },
+        "service_versions_currency_valid": {
+          "name": "service_versions_currency_valid",
+          "value": "\"service_versions\".\"currency\" = 'INR'"
+        },
+        "service_versions_availability_valid": {
+          "name": "service_versions_availability_valid",
+          "value": "\"service_versions\".\"availability\" in ('available', 'paused', 'unavailable')"
+        },
+        "service_versions_fulfilment_valid": {
+          "name": "service_versions_fulfilment_valid",
+          "value": "\"service_versions\".\"fulfilment_type\" in ('mcp', 'rest') and \"service_versions\".\"estimated_delivery_seconds\" between 1 and 86400"
+        },
+        "service_versions_catalog_hash_valid": {
+          "name": "service_versions_catalog_hash_valid",
+          "value": "length(\"service_versions\".\"catalog_hash\") = 64 and \"service_versions\".\"catalog_hash\" not glob '*[^0-9a-f]*'"
+        },
+        "service_versions_content_hash_valid": {
+          "name": "service_versions_content_hash_valid",
+          "value": "length(\"service_versions\".\"content_hash\") = 64 and \"service_versions\".\"content_hash\" not glob '*[^0-9a-f]*'"
+        }
+      }
+    },
+    "services": {
+      "name": "services",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "merchant_id": {
+          "name": "merchant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "external_id": {
+          "name": "external_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'ACTIVE'"
+        },
+        "current_version_id": {
+          "name": "current_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "services_merchant_external_uq": {
+          "name": "services_merchant_external_uq",
+          "columns": ["merchant_id", "external_id"],
+          "isUnique": true
+        },
+        "services_discovery_idx": {
+          "name": "services_discovery_idx",
+          "columns": ["status", "category"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "services_merchant_id_merchants_id_fk": {
+          "name": "services_merchant_id_merchants_id_fk",
+          "tableFrom": "services",
+          "tableTo": "merchants",
+          "columnsFrom": ["merchant_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "services_status_valid": {
+          "name": "services_status_valid",
+          "value": "\"services\".\"status\" in ('ACTIVE', 'RETIRED')"
+        },
+        "services_updated_after_created": {
+          "name": "services_updated_after_created",
+          "value": "\"services\".\"updated_at\" >= \"services\".\"created_at\""
+        }
+      }
+    },
+    "session": {
+      "name": "session",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "session_token_uq": {
+          "name": "session_token_uq",
+          "columns": ["token"],
+          "isUnique": true
+        },
+        "session_user_id_idx": {
+          "name": "session_user_id_idx",
+          "columns": ["user_id"],
+          "isUnique": false
+        },
+        "session_expires_at_idx": {
+          "name": "session_expires_at_idx",
+          "columns": ["expires_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "session_user_id_user_id_fk": {
+          "name": "session_user_id_user_id_fk",
+          "tableFrom": "session",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "session_token_not_blank": {
+          "name": "session_token_not_blank",
+          "value": "length(\"session\".\"token\") between 32 and 512"
+        },
+        "session_expires_after_created": {
+          "name": "session_expires_after_created",
+          "value": "\"session\".\"expires_at\" > \"session\".\"created_at\""
+        },
+        "session_updated_after_created": {
+          "name": "session_updated_after_created",
+          "value": "\"session\".\"updated_at\" >= \"session\".\"created_at\""
+        }
+      }
+    },
+    "user": {
+      "name": "user",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email_verified": {
+          "name": "email_verified",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "image": {
+          "name": "image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "user_email_uq": {
+          "name": "user_email_uq",
+          "columns": ["lower(\"email\")"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "user_email_not_blank": {
+          "name": "user_email_not_blank",
+          "value": "length(trim(\"user\".\"email\")) between 3 and 320"
+        },
+        "user_name_not_blank": {
+          "name": "user_name_not_blank",
+          "value": "length(trim(\"user\".\"name\")) between 1 and 128"
+        },
+        "user_updated_after_created": {
+          "name": "user_updated_after_created",
+          "value": "\"user\".\"updated_at\" >= \"user\".\"created_at\""
+        }
+      }
+    },
+    "verification": {
+      "name": "verification",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "identifier": {
+          "name": "identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "verification_identifier_idx": {
+          "name": "verification_identifier_idx",
+          "columns": ["identifier"],
+          "isUnique": false
+        },
+        "verification_expires_at_idx": {
+          "name": "verification_expires_at_idx",
+          "columns": ["expires_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "verification_identifier_not_blank": {
+          "name": "verification_identifier_not_blank",
+          "value": "length(trim(\"verification\".\"identifier\")) > 0"
+        },
+        "verification_value_not_blank": {
+          "name": "verification_value_not_blank",
+          "value": "length(\"verification\".\"value\") > 0"
+        },
+        "verification_expires_after_created": {
+          "name": "verification_expires_after_created",
+          "value": "\"verification\".\"expires_at\" > \"verification\".\"created_at\""
+        },
+        "verification_updated_after_created": {
+          "name": "verification_updated_after_created",
+          "value": "\"verification\".\"updated_at\" >= \"verification\".\"created_at\""
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {
+      "agents_organization_slug_uq": {
+        "columns": {
+          "lower(\"slug\")": {
+            "isExpression": true
+          }
+        }
+      },
+      "merchants_domain_uq": {
+        "columns": {
+          "lower(\"domain\")": {
+            "isExpression": true
+          }
+        }
+      },
+      "merchants_slug_uq": {
+        "columns": {
+          "lower(\"slug\")": {
+            "isExpression": true
+          }
+        }
+      },
+      "organizations_slug_uq": {
+        "columns": {
+          "lower(\"slug\")": {
+            "isExpression": true
+          }
+        }
+      },
+      "user_email_uq": {
+        "columns": {
+          "lower(\"email\")": {
+            "isExpression": true
+          }
+        }
+      }
+    }
+  }
+}
