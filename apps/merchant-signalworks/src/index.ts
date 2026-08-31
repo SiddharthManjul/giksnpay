@@ -1,6 +1,7 @@
 import { parseSignalWorksEnvironment } from "@mindpay/config";
 import { healthResponseSchema } from "@mindpay/contracts";
 import { createUlid } from "@mindpay/domain";
+import { RazorpayClient } from "@mindpay/razorpay";
 import { Hono } from "hono";
 import {
   createSignalWorksCheckoutRoutes,
@@ -9,10 +10,28 @@ import {
 } from "./checkout";
 import { createSignalWorksCatalogPublication } from "./catalog";
 import { createSignalWorksManifestPublication } from "./manifest";
+import {
+  createSignalWorksPaymentRoutes,
+  processSignalWorksRazorpayEvent,
+  type SignalWorksPaymentBindings,
+  type SignalWorksPaymentDependencies,
+} from "./payments";
 
-export type MerchantBindings = SignalWorksCheckoutBindings;
+export interface MerchantBindings extends SignalWorksCheckoutBindings {
+  MINDPAY_GATEWAY?: SignalWorksPaymentBindings["MINDPAY_GATEWAY"];
+  PAYMENT_EVENTS?: SignalWorksPaymentBindings["PAYMENT_EVENTS"];
+  PAYMENT_EVIDENCE?: SignalWorksPaymentBindings["PAYMENT_EVIDENCE"];
+  RAZORPAY_KEY_ID?: string;
+  RAZORPAY_KEY_SECRET?: string;
+  RAZORPAY_MCP_READONLY_ENABLED?: string;
+  RAZORPAY_REFUNDS_ENABLED?: string;
+  RAZORPAY_WEBHOOK_OLD_SECRET?: string;
+  RAZORPAY_WEBHOOK_SECRET?: string;
+}
 
-export interface MerchantRuntimeDependencies extends SignalWorksCheckoutDependencies {
+export interface MerchantRuntimeDependencies
+  extends SignalWorksCheckoutDependencies,
+    SignalWorksPaymentDependencies {
   readonly createCatalogNonce: () => string;
   readonly createManifestNonce: () => string;
   readonly now: () => Date;
@@ -26,7 +45,16 @@ const defaultDependencies: MerchantRuntimeDependencies = Object.freeze({
   createCatalogNonce: () => crypto.randomUUID(),
   createManifestNonce: () => crypto.randomUUID(),
   createOrderId: (now: Date) => `ord_${createUlid(now.getTime())}`,
+  createCallbackId: (now: Date) => `pcb_${createUlid(now.getTime())}`,
+  createPaymentEventId: (now: Date) => `evt_${createUlid(now.getTime())}`,
+  createPaymentOrderId: (now: Date) => `mpo_${createUlid(now.getTime())}`,
+  createProviderEventId: (now: Date) => `rpe_${createUlid(now.getTime())}`,
   now: () => new Date(),
+  razorpayClient: (bindings: SignalWorksPaymentBindings) =>
+    new RazorpayClient({
+      keyId: bindings.RAZORPAY_KEY_ID,
+      keySecret: bindings.RAZORPAY_KEY_SECRET,
+    }),
 });
 
 export function createMerchantApp(
@@ -87,10 +115,29 @@ export function createMerchantApp(
   });
 
   app.route("/", createSignalWorksCheckoutRoutes(dependencies));
+  app.route(
+    "/",
+    createSignalWorksPaymentRoutes(dependencies) as unknown as Hono<{ Bindings: MerchantBindings }>,
+  );
 
   return app;
 }
 
 export const merchant = createMerchantApp();
 
-export default merchant;
+export default {
+  fetch: merchant.fetch,
+  async queue(
+    batch: MessageBatch<import("./payments").SignalWorksPaymentQueueMessage>,
+    bindings: SignalWorksPaymentBindings,
+  ): Promise<void> {
+    for (const message of batch.messages) {
+      try {
+        await processSignalWorksRazorpayEvent(bindings, message.body);
+        message.ack();
+      } catch {
+        message.retry();
+      }
+    }
+  },
+};
