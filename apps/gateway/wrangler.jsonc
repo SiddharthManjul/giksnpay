@@ -8,6 +8,8 @@
     "enabled": true
   },
   "vars": {
+    "AGENT_MODEL_NAME": "gpt-5-mini",
+    "AGENT_MODEL_PROVIDER": "openai",
     "BETTER_AUTH_URL": "http://localhost:8787",
     "ENVIRONMENT": "development",
     "MINDPAY_API_AUDIENCE": "https://api.mindpay.example/",
@@ -27,6 +29,12 @@
       "binding": "MARKETPLACE_CACHE",
       "id": "00000000000000000000000000000001",
       "preview_id": "00000000000000000000000000000001"
+    }
+  ],
+  "services": [
+    {
+      "binding": "SIGNALWORKS",
+      "service": "mindpay-signalworks"
     }
   ]
 }
