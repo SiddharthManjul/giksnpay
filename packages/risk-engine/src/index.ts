@@ -1,6 +1,9 @@
-/**
- * Public entry point for the risk-engine package.
- *
- * Domain behavior is introduced only by the implementation phase that owns it.
- */
-export {};
+export {
+  RISK_RULESET_VERSION,
+  evaluateRisk,
+  type ModelRiskSignal,
+  type RiskEvaluationInput,
+  type RiskOutcome,
+  type RiskReason,
+  type RiskReasonCode,
+} from "./risk";
