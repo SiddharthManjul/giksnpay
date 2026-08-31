@@ -1,0 +1,4 @@
+BETTER_AUTH_SECRET=<generate-a-unique-high-entropy-value>
+AGENT_KEY_ENCRYPTION_KEY=<generate-32-random-bytes-as-unpadded-base64url>
+OPENAI_API_KEY=<create-an-openai-api-key-for-live-agent-runs>
+SIGNALWORKS_MACHINE_AUTH_TOKEN=<same-high-entropy-machine-token-configured-in-signalworks>
