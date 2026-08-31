@@ -19,6 +19,7 @@
     "@mindpay/crypto": "workspace:*",
     "@mindpay/domain": "workspace:*",
     "@mindpay/protocol-acp": "workspace:*",
+    "@mindpay/razorpay": "workspace:*",
     "drizzle-orm": "catalog:",
     "hono": "catalog:",
     "zod": "catalog:"
