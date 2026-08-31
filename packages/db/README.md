@@ -36,6 +36,24 @@ revision updates into a compare-and-swap boundary, preventing concurrent reviewe
 both committing. Verification expiry is stored separately from verification time so discovery can
 fail closed without another write.
 
+The seventh migration adds organization-scoped agents, immutable agent versions, encrypted private
+signing-key envelopes, public JWKs, and versioned tool bindings. Publication triggers reject every
+subsequent version update or delete and every bound-tool insert, update, or delete. The agent's
+current-version pointer can reference only one of its own published versions.
+
+The eighth migration adds persisted agent runs, typed tool-call evidence, and contiguous run events.
+Runs must use the organization's current published agent version; tool calls must use one of that
+version's immutable bindings. Run identity, terminal runs, terminal tool calls, and every event are
+immutable, while event insertion enforces an unbroken zero-based sequence.
+
+The ninth migration adds tenant-owned open mandates and proofs, transaction records and passkey
+approvals, consumed nonces, spend reservations, bounded payment attempts, and provider-event
+evidence. Partial and composite unique indexes reject duplicate active approvals, consumed nonces,
+attempt ordinals, and provider event IDs. D1 tenant-binding triggers prevent cross-organization
+parent references, identity triggers freeze signed and monetary inputs, and every table has an
+indexed retention deadline with a pre-expiry delete guard. Parent foreign keys use `RESTRICT`, so
+organization cleanup cannot silently remove retained payment evidence.
+
 Timestamps are UTC epoch milliseconds. JSON columns are storage-only values and must still be
 validated by their owning contract before insertion and after retrieval.
 
@@ -51,7 +69,9 @@ pnpm --filter @mindpay/db build
 
 The test command applies all migrations twice to one isolated local D1 database, applies them to a
 second empty database, compares the resulting schemas, and exercises uniqueness, lifecycle, hash,
-foreign-key, and append-only audit constraints.
+foreign-key, append-only audit, agent-key storage, current-version, publication-immutability,
+bound-tool evidence, terminal-run, contiguous-event, tenant-binding, replay, approval, attempt-limit,
+provider-event, and retention constraints.
 
 When the typed schema changes, generate a new ordered migration from this package directory:
 
