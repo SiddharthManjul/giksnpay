@@ -47,11 +47,48 @@ export const signalWorksKeyEncryptionSecretSchema = z
     "SignalWorks key encryption secret must be 32 bytes of unpadded base64url",
   );
 
+export const agentKeyEncryptionSecretSchema = z
+  .string()
+  .regex(
+    /^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/u,
+    "Agent key encryption secret must be 32 bytes of unpadded base64url",
+  );
+
+export const modelProviderNameSchema = z.enum(["openai"]);
+
+export const modelNameSchema = z
+  .string()
+  .trim()
+  .min(1, "Model name is required")
+  .max(128, "Model name cannot exceed 128 characters")
+  .regex(
+    /^[A-Za-z0-9][A-Za-z0-9._:-]*$/u,
+    "Model name must contain only letters, numbers, dots, underscores, colons, and hyphens",
+  );
+
+export const modelProviderApiKeySchema = z
+  .string()
+  .min(20, "Model-provider API key must contain at least 20 characters")
+  .max(512, "Model-provider API key cannot exceed 512 characters")
+  .regex(/^[\x21-\x7e]+$/u, "Model-provider API key must be printable ASCII without spaces");
+
 export const signalWorksMachineAuthTokenSchema = z
   .string()
   .min(32, "SignalWorks machine token must contain at least 32 characters")
   .max(512, "SignalWorks machine token cannot exceed 512 characters")
   .regex(/^[\x21-\x7e]+$/u, "SignalWorks machine token must be printable ASCII without spaces");
+
+export const razorpayTestKeyIdSchema = z
+  .string()
+  .regex(/^rzp_test_[A-Za-z0-9]{8,64}$/u, "Razorpay Key ID must be a Test Mode key");
+
+export const razorpaySecretSchema = z
+  .string()
+  .min(16)
+  .max(256)
+  .regex(/^[\x21-\x7e]+$/u, "Razorpay secrets must be printable ASCII without spaces");
+
+const booleanFlagSchema = z.enum(["true", "false"]).transform((value) => value === "true");
 
 export const workerEnvironmentSchema = z
   .object({
@@ -116,10 +153,37 @@ export const signalWorksEnvironmentSchema = z
   .strict()
   .readonly();
 
+export const signalWorksPaymentEnvironmentSchema = z
+  .object({
+    ENVIRONMENT: runtimeEnvironmentSchema,
+    RAZORPAY_KEY_ID: razorpayTestKeyIdSchema,
+    RAZORPAY_KEY_SECRET: razorpaySecretSchema,
+    RAZORPAY_MCP_READONLY_ENABLED: booleanFlagSchema.default(false),
+    RAZORPAY_REFUNDS_ENABLED: booleanFlagSchema.default(false),
+    RAZORPAY_WEBHOOK_OLD_SECRET: razorpaySecretSchema.optional(),
+    RAZORPAY_WEBHOOK_SECRET: razorpaySecretSchema,
+    SIGNALWORKS_KEY_ENCRYPTION_KEY: signalWorksKeyEncryptionSecretSchema,
+    SIGNALWORKS_MACHINE_AUTH_TOKEN: signalWorksMachineAuthTokenSchema,
+  })
+  .strict()
+  .readonly();
+
+export const modelProviderEnvironmentSchema = z
+  .object({
+    AGENT_MODEL_NAME: modelNameSchema,
+    AGENT_MODEL_PROVIDER: modelProviderNameSchema,
+    OPENAI_API_KEY: modelProviderApiKeySchema,
+  })
+  .strict()
+  .readonly();
+
 export type RuntimeEnvironment = z.infer<typeof runtimeEnvironmentSchema>;
 export type WorkerEnvironment = z.infer<typeof workerEnvironmentSchema>;
 export type GatewayAuthEnvironment = z.infer<typeof gatewayAuthEnvironmentSchema>;
+export type ModelProviderEnvironment = z.infer<typeof modelProviderEnvironmentSchema>;
+export type ModelProviderName = z.infer<typeof modelProviderNameSchema>;
 export type SignalWorksEnvironment = z.infer<typeof signalWorksEnvironmentSchema>;
+export type SignalWorksPaymentEnvironment = z.infer<typeof signalWorksPaymentEnvironmentSchema>;
 
 export function parseWorkerEnvironment(input: unknown): WorkerEnvironment {
   return workerEnvironmentSchema.parse(input);
@@ -131,4 +195,12 @@ export function parseGatewayAuthEnvironment(input: unknown): GatewayAuthEnvironm
 
 export function parseSignalWorksEnvironment(input: unknown): SignalWorksEnvironment {
   return signalWorksEnvironmentSchema.parse(input);
+}
+
+export function parseSignalWorksPaymentEnvironment(input: unknown): SignalWorksPaymentEnvironment {
+  return signalWorksPaymentEnvironmentSchema.parse(input);
+}
+
+export function parseModelProviderEnvironment(input: unknown): ModelProviderEnvironment {
+  return modelProviderEnvironmentSchema.parse(input);
 }
