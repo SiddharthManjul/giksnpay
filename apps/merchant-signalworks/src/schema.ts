@@ -3,6 +3,7 @@ import type {
   Es256PublicJwk,
   MerchantCheckout,
   MerchantOrderLifecycleEvent,
+  MerchantPaymentEvent,
 } from "@mindpay/contracts";
 import type { AesGcmEnvelope } from "@mindpay/crypto";
 import type { AcpCheckoutSession } from "@mindpay/protocol-acp";
@@ -28,6 +29,24 @@ export const signalWorksOrderEventTypes = [
   "CHECKOUT_UPDATED",
   "ORDER_CREATED",
   "CHECKOUT_CANCELED",
+] as const;
+export const signalWorksPaymentOrderStatuses = [
+  "CREATING",
+  "CREATED",
+  "PENDING",
+  "RECONCILING",
+  "FAILED",
+  "CAPTURED",
+  "REFUND_PENDING",
+  "REFUNDED",
+] as const;
+export const signalWorksProviderEventStatuses = ["VERIFIED", "PROCESSED", "REJECTED"] as const;
+export const signalWorksPaymentEventTypes = [
+  "ORDER_PAID",
+  "PAYMENT_CAPTURED",
+  "PAYMENT_FAILED",
+  "REFUND_PENDING",
+  "REFUNDED",
 ] as const;
 
 export const signalWorksMerchantIdentity = sqliteTable(
@@ -424,12 +443,242 @@ export const signalWorksOutboundEvents = sqliteTable(
   ],
 );
 
+export const signalWorksPaymentOrders = sqliteTable(
+  "merchant_payment_orders",
+  {
+    id: text("id").primaryKey(),
+    checkoutSessionId: text("checkout_session_id")
+      .notNull()
+      .references(() => signalWorksCheckoutSessions.id, {
+        onDelete: "restrict",
+        onUpdate: "cascade",
+      }),
+    transactionId: text("transaction_id").notNull(),
+    mandateId: text("mandate_id").notNull(),
+    agentId: text("agent_id").notNull(),
+    serviceId: text("service_id").notNull(),
+    attemptNumber: integer("attempt_number").notNull(),
+    receipt: text("receipt").notNull(),
+    providerOrderId: text("provider_order_id"),
+    providerPaymentId: text("provider_payment_id"),
+    providerRefundId: text("provider_refund_id"),
+    amountSubunits: integer("amount_subunits").notNull(),
+    currency: text("currency", { enum: ["INR"] }).notNull(),
+    checkoutHash: text("checkout_hash").notNull(),
+    closedPaymentMandateHash: text("closed_payment_mandate_hash").notNull(),
+    notes: text("notes", { mode: "json" }).$type<Readonly<Record<string, string>>>().notNull(),
+    status: text("status", { enum: signalWorksPaymentOrderStatuses }).notNull(),
+    orderStatus: text("order_status", { enum: ["created", "attempted", "paid"] }),
+    paymentStatus: text("payment_status", {
+      enum: ["created", "authorized", "captured", "refunded", "failed"],
+    }),
+    fulfilmentEligible: integer("fulfilment_eligible", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    failureCode: text("failure_code"),
+    providerOrderSnapshot: text("provider_order_snapshot", { mode: "json" }).$type<unknown>(),
+    providerPaymentSnapshot: text("provider_payment_snapshot", { mode: "json" }).$type<unknown>(),
+    completedAt: integer("completed_at", { mode: "timestamp_ms" }),
+    retentionExpiresAt: integer("retention_expires_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("merchant_payment_orders_transaction_attempt_uq").on(
+      table.transactionId,
+      table.attemptNumber,
+    ),
+    uniqueIndex("merchant_payment_orders_receipt_uq").on(table.receipt),
+    uniqueIndex("merchant_payment_orders_provider_order_uq").on(table.providerOrderId),
+    uniqueIndex("merchant_payment_orders_provider_payment_uq").on(table.providerPaymentId),
+    uniqueIndex("merchant_payment_orders_provider_refund_uq").on(table.providerRefundId),
+    index("merchant_payment_orders_checkout_idx").on(table.checkoutSessionId, table.createdAt),
+    index("merchant_payment_orders_status_idx").on(table.status, table.updatedAt),
+    check(
+      "merchant_payment_orders_id_valid",
+      sql`length(${table.id}) = 30 and ${table.id} glob 'mpo_*'`,
+    ),
+    check(
+      "merchant_payment_orders_transaction_valid",
+      sql`length(${table.transactionId}) = 30 and ${table.transactionId} glob 'ctx_*'`,
+    ),
+    check("merchant_payment_orders_attempt_valid", sql`${table.attemptNumber} between 1 and 10`),
+    check(
+      "merchant_payment_orders_receipt_valid",
+      sql`length(${table.receipt}) between 1 and 40 and ${table.receipt} not glob '*[^A-Za-z0-9_-]*'`,
+    ),
+    check("merchant_payment_orders_amount_valid", sql`${table.amountSubunits} >= 100`),
+    check("merchant_payment_orders_currency_valid", sql`${table.currency} = 'INR'`),
+    check(
+      "merchant_payment_orders_hashes_valid",
+      sql`length(${table.checkoutHash}) = 64 and ${table.checkoutHash} not glob '*[^0-9a-f]*' and length(${table.closedPaymentMandateHash}) = 64 and ${table.closedPaymentMandateHash} not glob '*[^0-9a-f]*'`,
+    ),
+    check(
+      "merchant_payment_orders_notes_valid",
+      sql`json_valid(${table.notes}) and json_type(${table.notes}) = 'object'`,
+    ),
+    check(
+      "merchant_payment_orders_status_valid",
+      sql`${table.status} in ('CREATING', 'CREATED', 'PENDING', 'RECONCILING', 'FAILED', 'CAPTURED', 'REFUND_PENDING', 'REFUNDED')`,
+    ),
+    check(
+      "merchant_payment_orders_provider_order_valid",
+      sql`(${table.providerOrderId} is null and ${table.status} in ('CREATING', 'FAILED')) or ${table.providerOrderId} glob 'order_*'`,
+    ),
+    check(
+      "merchant_payment_orders_provider_refund_valid",
+      sql`${table.providerRefundId} is null or ${table.providerRefundId} glob 'rfnd_*'`,
+    ),
+    check(
+      "merchant_payment_orders_eligibility_valid",
+      sql`${table.fulfilmentEligible} = 0 or (${table.status} = 'CAPTURED' and ${table.orderStatus} = 'paid' and ${table.paymentStatus} = 'captured')`,
+    ),
+    check(
+      "merchant_payment_orders_time_valid",
+      sql`${table.updatedAt} >= ${table.createdAt} and ${table.retentionExpiresAt} > ${table.createdAt} and (${table.completedAt} is null or ${table.completedAt} between ${table.createdAt} and ${table.updatedAt})`,
+    ),
+  ],
+);
+
+export const signalWorksPaymentCallbacks = sqliteTable(
+  "merchant_payment_callbacks",
+  {
+    id: text("id").primaryKey(),
+    paymentOrderId: text("payment_order_id")
+      .notNull()
+      .references(() => signalWorksPaymentOrders.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    providerPaymentId: text("provider_payment_id").notNull(),
+    signatureHash: text("signature_hash").notNull(),
+    verifiedAt: integer("verified_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("merchant_payment_callbacks_order_payment_uq").on(
+      table.paymentOrderId,
+      table.providerPaymentId,
+    ),
+    check(
+      "merchant_payment_callbacks_id_valid",
+      sql`length(${table.id}) = 30 and ${table.id} glob 'pcb_*'`,
+    ),
+    check("merchant_payment_callbacks_payment_valid", sql`${table.providerPaymentId} glob 'pay_*'`),
+    check(
+      "merchant_payment_callbacks_hash_valid",
+      sql`length(${table.signatureHash}) = 64 and ${table.signatureHash} not glob '*[^0-9a-f]*'`,
+    ),
+    check("merchant_payment_callbacks_time_valid", sql`${table.createdAt} = ${table.verifiedAt}`),
+  ],
+);
+
+export const signalWorksProviderEvents = sqliteTable(
+  "merchant_provider_events",
+  {
+    id: text("id").primaryKey(),
+    providerEventId: text("provider_event_id").notNull(),
+    paymentOrderId: text("payment_order_id").references(() => signalWorksPaymentOrders.id, {
+      onDelete: "restrict",
+      onUpdate: "cascade",
+    }),
+    eventType: text("event_type").notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    rawPayloadR2Key: text("raw_payload_r2_key").notNull(),
+    processingStatus: text("processing_status", { enum: signalWorksProviderEventStatuses })
+      .notNull()
+      .default("VERIFIED"),
+    processingAttempts: integer("processing_attempts").notNull().default(0),
+    failureCode: text("failure_code"),
+    receivedAt: integer("received_at", { mode: "timestamp_ms" }).notNull(),
+    processedAt: integer("processed_at", { mode: "timestamp_ms" }),
+    retentionExpiresAt: integer("retention_expires_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("merchant_provider_events_provider_event_uq").on(table.providerEventId),
+    index("merchant_provider_events_processing_idx").on(table.processingStatus, table.receivedAt),
+    check(
+      "merchant_provider_events_id_valid",
+      sql`length(${table.id}) = 30 and ${table.id} glob 'rpe_*'`,
+    ),
+    check(
+      "merchant_provider_events_reference_valid",
+      sql`length(${table.providerEventId}) between 3 and 128 and length(${table.rawPayloadR2Key}) between 3 and 1024`,
+    ),
+    check(
+      "merchant_provider_events_type_valid",
+      sql`${table.eventType} in ('order.paid', 'payment.captured', 'payment.failed', 'refund.created', 'refund.failed', 'refund.processed')`,
+    ),
+    check(
+      "merchant_provider_events_hash_valid",
+      sql`length(${table.payloadHash}) = 64 and ${table.payloadHash} not glob '*[^0-9a-f]*'`,
+    ),
+    check(
+      "merchant_provider_events_status_valid",
+      sql`${table.processingStatus} in ('VERIFIED', 'PROCESSED', 'REJECTED')`,
+    ),
+    check(
+      "merchant_provider_events_attempts_valid",
+      sql`${table.processingAttempts} between 0 and 100`,
+    ),
+    check(
+      "merchant_provider_events_time_valid",
+      sql`${table.createdAt} = ${table.receivedAt} and ${table.retentionExpiresAt} > ${table.receivedAt} and (${table.processedAt} is null or ${table.processedAt} >= ${table.receivedAt})`,
+    ),
+  ],
+);
+
+export const signalWorksPaymentEvents = sqliteTable(
+  "merchant_payment_events",
+  {
+    eventId: text("event_id").primaryKey(),
+    paymentOrderId: text("payment_order_id")
+      .notNull()
+      .references(() => signalWorksPaymentOrders.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    eventType: text("event_type", { enum: signalWorksPaymentEventTypes }).notNull(),
+    nonce: text("nonce").notNull(),
+    kid: text("kid").notNull(),
+    event: text("event", { mode: "json" }).$type<MerchantPaymentEvent>().notNull(),
+    signature: text("signature", { mode: "json" }).$type<Es256CanonicalSignature>().notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("merchant_payment_events_nonce_uq").on(table.nonce),
+    index("merchant_payment_events_order_idx").on(table.paymentOrderId, table.occurredAt),
+    check(
+      "merchant_payment_events_id_valid",
+      sql`length(${table.eventId}) = 30 and ${table.eventId} glob 'evt_*'`,
+    ),
+    check(
+      "merchant_payment_events_type_valid",
+      sql`${table.eventType} in ('ORDER_PAID', 'PAYMENT_CAPTURED', 'PAYMENT_FAILED', 'REFUND_PENDING', 'REFUNDED')`,
+    ),
+    check(
+      "merchant_payment_events_json_valid",
+      sql`json_valid(${table.event}) and json_valid(${table.signature})`,
+    ),
+    check(
+      "merchant_payment_events_hash_valid",
+      sql`length(${table.payloadHash}) = 64 and ${table.payloadHash} not glob '*[^0-9a-f]*'`,
+    ),
+    check(
+      "merchant_payment_events_time_valid",
+      sql`${table.createdAt} = ${table.occurredAt} and ${table.expiresAt} > ${table.occurredAt}`,
+    ),
+  ],
+);
+
 export const signalWorksSchema = {
   signalWorksCheckoutSessions,
   signalWorksIdempotencyRecords,
   signalWorksMachineCredentials,
   signalWorksMerchantIdentity,
   signalWorksOutboundEvents,
+  signalWorksPaymentCallbacks,
+  signalWorksPaymentEvents,
+  signalWorksPaymentOrders,
+  signalWorksProviderEvents,
   signalWorksServiceVersions,
   signalWorksSigningKeys,
 };
@@ -441,3 +690,7 @@ export type SignalWorksMachineCredentialRow = typeof signalWorksMachineCredentia
 export type SignalWorksCheckoutSessionRow = typeof signalWorksCheckoutSessions.$inferSelect;
 export type SignalWorksIdempotencyRecordRow = typeof signalWorksIdempotencyRecords.$inferSelect;
 export type SignalWorksOutboundEventRow = typeof signalWorksOutboundEvents.$inferSelect;
+export type SignalWorksPaymentOrderRow = typeof signalWorksPaymentOrders.$inferSelect;
+export type SignalWorksPaymentCallbackRow = typeof signalWorksPaymentCallbacks.$inferSelect;
+export type SignalWorksProviderEventRow = typeof signalWorksProviderEvents.$inferSelect;
+export type SignalWorksPaymentEventRow = typeof signalWorksPaymentEvents.$inferSelect;
