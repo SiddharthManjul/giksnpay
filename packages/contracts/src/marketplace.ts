@@ -65,6 +65,10 @@ export const merchantAdministrationResponseSchema = z
   .strict()
   .readonly();
 
+export const marketplaceServiceIdSchema = z
+  .string()
+  .regex(/^service_[0-7][0-9A-HJKMNP-TV-Z]{25}$/u);
+
 export const marketplaceServiceSchema = z
   .object({
     availability: serviceAvailabilitySchema,
@@ -80,7 +84,7 @@ export const marketplaceServiceSchema = z
       })
       .strict()
       .readonly(),
-    id: z.string().regex(/^service_[0-7][0-9A-HJKMNP-TV-Z]{25}$/u),
+    id: marketplaceServiceIdSchema,
     merchant: marketplaceMerchantSummarySchema,
     name: z.string().min(2).max(160),
     paymentRail: paymentRailSchema,
