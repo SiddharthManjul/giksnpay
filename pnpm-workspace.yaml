@@ -3,6 +3,7 @@ packages:
   - packages/*
 
 catalog:
+  '@ai-sdk/openai': 4.0.51
   '@biomejs/biome': 2.5.11
   '@cloudflare/workers-types': 5.20260828.1
   '@hono/zod-openapi': 1.6.1
@@ -18,6 +19,7 @@ catalog:
   '@xyflow/react': 12.11.5
   ajv: 8.20.0
   ajv-formats: 3.0.1
+  ai: 7.0.84
   better-auth: 1.7.2
   clsx: 2.1.1
   drizzle-kit: 0.31.10
