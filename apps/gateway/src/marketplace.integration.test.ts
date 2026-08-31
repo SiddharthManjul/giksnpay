@@ -65,6 +65,7 @@ describe("Gateway merchant verification and marketplace", () => {
   beforeAll(async () => {
     ({ database, miniflare } = await createTestDatabase("mindpay-marketplace-test"));
     bindings = {
+      AGENT_KEY_ENCRYPTION_KEY: "A".repeat(43),
       BETTER_AUTH_SECRET: TEST_AUTH_SECRET,
       BETTER_AUTH_URL: AUTH_URL,
       DB: database,
