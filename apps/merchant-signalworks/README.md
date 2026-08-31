@@ -106,3 +106,30 @@ Accepted mutations append immutable signed lifecycle events to `merchant_outboun
 shared verifier checks audience, issuer, timestamp, expiry, nonce replay, state hash, signature,
 and event-key lifecycle. Completing the ACP contract creates an order record but does not contact
 Razorpay; merchant-owned Test Mode payment starts in Phase 7.
+
+## Razorpay Test Mode payments
+
+SignalWorks owns all Razorpay credentials and the external order lifecycle. Configure only Test
+Mode values in `.dev.vars`; never put the key secret or webhook secret in `wrangler.jsonc`, logs,
+signed merchant documents, Gateway bindings, or browser responses.
+
+The payment boundary exposes:
+
+```text
+POST /payments/orders
+POST /payments/callback
+POST /webhooks/razorpay
+POST /payments/:transactionId/refunds
+GET  /payments/:transactionId/provider-status
+```
+
+Order creation requires the Gateway bearer token, `Idempotency-Key`, and a closed payment
+authorization for a reserved transaction. The callback verifies the stored-order HMAC but remains
+non-authoritative. Webhooks are verified over exact raw bytes, retained privately in R2,
+deduplicated in D1, and reconciled asynchronously by the configured queue. SignalWorks signs the
+result with its event-purpose key for MindPay.
+
+Refunds and the read-only status adapter return not found unless their independent feature flags
+are enabled. Neither is required for the purchase path. Run deterministic payment verification
+from the repository root with `pnpm verify:phase-07`; the real external Test Mode run additionally
+requires credentials and a public/tunnel webhook endpoint.
