@@ -6,6 +6,10 @@ import {
   signalWorksMachineCredentials,
   signalWorksMerchantIdentity,
   signalWorksOutboundEvents,
+  signalWorksPaymentCallbacks,
+  signalWorksPaymentEvents,
+  signalWorksPaymentOrders,
+  signalWorksProviderEvents,
   signalWorksServiceVersions,
   signalWorksSigningKeys,
 } from "./schema";
@@ -40,6 +44,24 @@ describe("SignalWorks identity schema", () => {
     expect(
       getTableConfig(signalWorksOutboundEvents).indexes.map((index) => index.config.name),
     ).toEqual(["merchant_outbound_events_nonce_uq", "merchant_outbound_events_checkout_idx"]);
+  });
+
+  it("separates payment attempts, verified callbacks, raw provider events, and signed outbox events", () => {
+    expect(getTableConfig(signalWorksPaymentOrders).name).toBe("merchant_payment_orders");
+    expect(getTableConfig(signalWorksPaymentCallbacks).name).toBe("merchant_payment_callbacks");
+    expect(getTableConfig(signalWorksProviderEvents).name).toBe("merchant_provider_events");
+    expect(getTableConfig(signalWorksPaymentEvents).name).toBe("merchant_payment_events");
+    expect(
+      getTableConfig(signalWorksPaymentOrders).indexes.map((index) => index.config.name),
+    ).toEqual([
+      "merchant_payment_orders_transaction_attempt_uq",
+      "merchant_payment_orders_receipt_uq",
+      "merchant_payment_orders_provider_order_uq",
+      "merchant_payment_orders_provider_payment_uq",
+      "merchant_payment_orders_provider_refund_uq",
+      "merchant_payment_orders_checkout_idx",
+      "merchant_payment_orders_status_idx",
+    ]);
   });
 
   it("declares purpose, public-key, encrypted-private-key, and lifecycle checks", () => {
