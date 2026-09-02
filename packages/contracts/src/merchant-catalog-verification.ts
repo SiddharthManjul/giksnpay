@@ -5,8 +5,8 @@ import {
 } from "@mindpay/crypto";
 import { z } from "zod";
 import {
-  merchantHttpsUrlSchema,
   type MerchantManifest,
+  merchantHttpsUrlSchema,
   type SignedMerchantCatalog,
   signedMerchantCatalogSchema,
 } from "./merchant";
