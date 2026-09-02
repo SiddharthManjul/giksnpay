@@ -24,7 +24,7 @@ export const agentSlugSchema = z
 
 export const agentConfigurationSchema = z
   .object({
-    maxOutputTokens: z.number().int().min(128).max(32_768),
+    maxOutputTokens: z.number().int().min(128).max(2_048),
     temperature: z.number().min(0).max(2),
   })
   .strict()
