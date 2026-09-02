@@ -5,6 +5,7 @@ import {
 } from "@mindpay/crypto";
 import { ulidSchema, utcTimestampSchema } from "@mindpay/domain";
 import { z } from "zod";
+import { sha256HexSchema } from "./cross-party";
 import {
   checkoutSessionIdSchema,
   es256CanonicalSignatureSchema,
@@ -13,7 +14,6 @@ import {
   merchantSigningKeySchema,
   offerNonceSchema,
 } from "./merchant";
-import { sha256HexSchema } from "./cross-party";
 
 const keyIdSchema = z.string().regex(/^[A-Za-z0-9._:-]{1,128}$/u, "Key ID is not canonical");
 
