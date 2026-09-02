@@ -25,6 +25,12 @@
     "verify:phase-06": "node ./scripts/verify-phase-06.mjs",
     "verify:phase-07": "node ./scripts/verify-phase-07.mjs"
   },
+  "pnpm": {
+    "overrides": {
+      "esbuild@0.18.20": "0.25.0",
+      "qs@6.15.3": "6.16.0"
+    }
+  },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@cloudflare/workers-types": "catalog:",
