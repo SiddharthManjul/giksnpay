@@ -2,7 +2,7 @@ import { parseGatewayAuthEnvironment } from "@mindpay/config";
 import { createMindPayDatabase, schema } from "@mindpay/db";
 import { createUlid } from "@mindpay/domain";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { betterAuth, type BetterAuthOptions } from "better-auth/minimal";
+import { type BetterAuthOptions, betterAuth } from "better-auth/minimal";
 
 export const AUTH_BASE_PATH = "/api/auth";
 
@@ -14,6 +14,7 @@ export interface GatewayAuthBindings {
   BETTER_AUTH_URL: string;
   DB: D1Database;
   ENVIRONMENT: string;
+  GOOGLE_GENERATIVE_AI_API_KEY?: string;
   MARKETPLACE_CACHE?: KVNamespace;
   MINDPAY_API_AUDIENCE?: string;
   OPENAI_API_KEY?: string;
@@ -47,7 +48,10 @@ export function createGatewayAuth(bindings: GatewayAuthBindings) {
     PASSKEY_RP_ID: bindings.PASSKEY_RP_ID,
     TRUSTED_ORIGINS: bindings.TRUSTED_ORIGINS,
   });
-  const secureCookies = environment.BETTER_AUTH_URL.startsWith("https://");
+  const secureCookies =
+    environment.ENVIRONMENT === "preview" ||
+    environment.ENVIRONMENT === "production" ||
+    environment.BETTER_AUTH_URL.startsWith("https://");
   const database = createMindPayDatabase(bindings.DB);
 
   const options = {
