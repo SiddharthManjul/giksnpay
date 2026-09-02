@@ -19,9 +19,9 @@ describe("agent key environment", () => {
 
 describe("model-provider environment", () => {
   const valid = {
-    AGENT_MODEL_NAME: "gpt-5-mini",
-    AGENT_MODEL_PROVIDER: "openai",
-    OPENAI_API_KEY: "mindpay_test_openai_key_00000001",
+    AGENT_MODEL_NAME: "gemini-3.8-flash",
+    AGENT_MODEL_PROVIDER: "google",
+    GOOGLE_GENERATIVE_AI_API_KEY: "mindpay_test_google_key_00000001",
   } as const;
 
   it("accepts an explicit supported provider, model, and secret", () => {
@@ -35,9 +35,27 @@ describe("model-provider environment", () => {
     expect(() =>
       parseModelProviderEnvironment({ ...valid, AGENT_MODEL_NAME: "gpt-5 mini" }),
     ).toThrow();
-    expect(() => parseModelProviderEnvironment({ ...valid, OPENAI_API_KEY: "weak" })).toThrow();
     expect(() =>
-      parseModelProviderEnvironment({ ...valid, OPENAI_BASE_URL: "https://evil.test" }),
+      parseModelProviderEnvironment({ ...valid, GOOGLE_GENERATIVE_AI_API_KEY: "weak" }),
+    ).toThrow();
+    expect(() =>
+      parseModelProviderEnvironment({ ...valid, GOOGLE_BASE_URL: "https://evil.test" }),
+    ).toThrow();
+  });
+
+  it("keeps OpenAI as an explicit provider alternative", () => {
+    const openAI = {
+      AGENT_MODEL_NAME: "gpt-5-mini",
+      AGENT_MODEL_PROVIDER: "openai",
+      OPENAI_API_KEY: "mindpay_test_openai_key_00000001",
+    } as const;
+
+    expect(parseModelProviderEnvironment(openAI)).toEqual(openAI);
+    expect(() =>
+      parseModelProviderEnvironment({
+        ...openAI,
+        GOOGLE_GENERATIVE_AI_API_KEY: valid.GOOGLE_GENERATIVE_AI_API_KEY,
+      }),
     ).toThrow();
   });
 });
@@ -59,53 +77,70 @@ describe("gateway auth environment", () => {
     expect(
       parseGatewayAuthEnvironment({
         BETTER_AUTH_SECRET: "test-secret-with-more-than-thirty-two-characters",
-        BETTER_AUTH_URL: "https://api.mindpay.test/",
+        BETTER_AUTH_URL: "https://api.mindpay.finance/",
         ENVIRONMENT: "production",
-        PASSKEY_RP_ID: "MINDPAY.TEST",
-        TRUSTED_ORIGINS: "https://mindpay.test/, https://admin.mindpay.test",
+        PASSKEY_RP_ID: "MINDPAY.FINANCE",
+        TRUSTED_ORIGINS: "https://mindpay.finance/, https://admin.mindpay.finance",
       }),
     ).toEqual({
       BETTER_AUTH_SECRET: "test-secret-with-more-than-thirty-two-characters",
-      BETTER_AUTH_URL: "https://api.mindpay.test",
+      BETTER_AUTH_URL: "https://api.mindpay.finance",
       ENVIRONMENT: "production",
-      PASSKEY_RP_ID: "mindpay.test",
-      TRUSTED_ORIGINS: ["https://mindpay.test", "https://admin.mindpay.test"],
+      PASSKEY_RP_ID: "mindpay.finance",
+      TRUSTED_ORIGINS: ["https://mindpay.finance", "https://admin.mindpay.finance"],
     });
   });
 
   it("rejects weak secrets, URL paths, duplicate origins, and production HTTP", () => {
     const valid = {
       BETTER_AUTH_SECRET: "test-secret-with-more-than-thirty-two-characters",
-      BETTER_AUTH_URL: "https://api.mindpay.test",
+      BETTER_AUTH_URL: "https://api.mindpay.finance",
       ENVIRONMENT: "production",
-      PASSKEY_RP_ID: "mindpay.test",
-      TRUSTED_ORIGINS: "https://mindpay.test",
+      PASSKEY_RP_ID: "mindpay.finance",
+      TRUSTED_ORIGINS: "https://mindpay.finance",
     };
 
     expect(() => parseGatewayAuthEnvironment({ ...valid, BETTER_AUTH_SECRET: "weak" })).toThrow();
     expect(() =>
-      parseGatewayAuthEnvironment({ ...valid, BETTER_AUTH_URL: "https://api.mindpay.test/auth" }),
+      parseGatewayAuthEnvironment({
+        ...valid,
+        BETTER_AUTH_URL: "https://api.mindpay.finance/auth",
+      }),
     ).toThrow();
     expect(() =>
       parseGatewayAuthEnvironment({
         ...valid,
-        TRUSTED_ORIGINS: "https://mindpay.test,https://mindpay.test/",
+        TRUSTED_ORIGINS: "https://mindpay.finance,https://mindpay.finance/",
       }),
     ).toThrow();
     expect(() =>
-      parseGatewayAuthEnvironment({ ...valid, BETTER_AUTH_URL: "http://api.mindpay.test" }),
+      parseGatewayAuthEnvironment({ ...valid, BETTER_AUTH_URL: "http://api.mindpay.finance" }),
     ).toThrow();
     expect(() =>
-      parseGatewayAuthEnvironment({ ...valid, TRUSTED_ORIGINS: "http://mindpay.test" }),
+      parseGatewayAuthEnvironment({ ...valid, TRUSTED_ORIGINS: "http://mindpay.finance" }),
     ).toThrow();
     expect(() =>
-      parseGatewayAuthEnvironment({ ...valid, PASSKEY_RP_ID: "https://mindpay.test" }),
+      parseGatewayAuthEnvironment({ ...valid, PASSKEY_RP_ID: "https://mindpay.finance" }),
     ).toThrow();
     expect(() =>
       parseGatewayAuthEnvironment({
         ...valid,
         PASSKEY_RP_ID: "other.test",
-        TRUSTED_ORIGINS: "https://mindpay.test",
+        TRUSTED_ORIGINS: "https://mindpay.finance",
+      }),
+    ).toThrow(/within the passkey RP ID/);
+    expect(() =>
+      parseGatewayAuthEnvironment({
+        ...valid,
+        BETTER_AUTH_URL: "https://api.mindpay.invalid",
+        PASSKEY_RP_ID: "mindpay.invalid",
+        TRUSTED_ORIGINS: "https://app.mindpay.invalid",
+      }),
+    ).toThrow(/public DNS names/);
+    expect(() =>
+      parseGatewayAuthEnvironment({
+        ...valid,
+        BETTER_AUTH_URL: "https://api.other.finance",
       }),
     ).toThrow(/within the passkey RP ID/);
   });
