@@ -1,7 +1,8 @@
 import { currencySubunitsSchema, utcTimestampSchema } from "@mindpay/domain";
 import { z } from "zod";
-import { agentIdSchema, transactionIdSchema, userIdSchema } from "./cross-party";
 import { agentToolVersionIdSchema, agentVersionIdSchema } from "./agents";
+import { agentIdSchema, transactionIdSchema, userIdSchema } from "./cross-party";
+import { marketplaceServiceIdSchema, marketplaceServiceSchema } from "./marketplace";
 import {
   es256CanonicalSignatureSchema,
   merchantDomainSchema,
@@ -10,7 +11,6 @@ import {
   semanticVersionSchema,
   stableIdentifierSchema,
 } from "./merchant";
-import { marketplaceServiceIdSchema, marketplaceServiceSchema } from "./marketplace";
 
 const PREFIXED_ULID_SUFFIX = "[0-7][0-9A-HJKMNP-TV-Z]{25}";
 const prefixedUlidSchema = (prefix: string) =>
