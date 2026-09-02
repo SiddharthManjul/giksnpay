@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const configPath = join(packageRoot, "wrangler.jsonc");
-const databaseName = "mindpay-local";
+const databaseName = "mindpay";
 const temporaryRoot = mkdtempSync(join(tmpdir(), "mindpay-d1-verification-"));
 const firstDatabase = join(temporaryRoot, "first");
 const secondDatabase = join(temporaryRoot, "second");
@@ -15,6 +15,8 @@ const migrationsRoot = join(packageRoot, "migrations");
 const expectedTables = [
   "account",
   "agent_keys",
+  "agent_model_capacity_leases",
+  "agent_model_usage_windows",
   "agent_run_events",
   "agent_runs",
   "agent_tool_calls",
@@ -149,7 +151,7 @@ try {
   assertEqual(triggerNames, expectedTriggers, "Database integrity triggers are missing");
 
   const migrationCount = query(firstDatabase, "SELECT count(*) AS count FROM d1_migrations");
-  assert(migrationCount[0]?.count === 12, "Every migration must be recorded exactly once");
+  assert(migrationCount[0]?.count === 13, "Every migration must be recorded exactly once");
 
   seedIntegrityRecords(firstDatabase);
   verifyUniqueness(firstDatabase);
