@@ -74,12 +74,14 @@ export async function generateEs256KeyPair(extractable = false): Promise<CryptoK
 
 export async function exportEs256PublicJwk(publicKey: CryptoKey): Promise<Readonly<JsonWebKey>> {
   assertEs256CryptoKey(publicKey, "public", "verify");
-  return parseEs256PublicJwk(await getSubtleCrypto().exportKey("jwk", publicKey));
+  const exported = await getSubtleCrypto().exportKey("jwk", publicKey);
+  return parseEs256PublicJwk(normalizeWebCryptoJwk(exported));
 }
 
 export async function exportEs256PrivateJwk(privateKey: CryptoKey): Promise<Readonly<JsonWebKey>> {
   assertEs256CryptoKey(privateKey, "private", "sign");
-  return parseEs256PrivateJwk(await getSubtleCrypto().exportKey("jwk", privateKey));
+  const exported = await getSubtleCrypto().exportKey("jwk", privateKey);
+  return parseEs256PrivateJwk(normalizeWebCryptoJwk(exported));
 }
 
 export async function importEs256PublicJwk(jwk: unknown): Promise<CryptoKey> {
@@ -372,6 +374,23 @@ function snapshotJwk(jwk: unknown): JsonWebKey {
   }
 
   return parsed as JsonWebKey;
+}
+
+/**
+ * Web Crypto owns this value, but runtimes may return its Web IDL dictionary
+ * from a different object realm. Convert that trusted dictionary to plain JSON
+ * before applying the strict parser used for untrusted JWK inputs.
+ */
+function normalizeWebCryptoJwk(jwk: JsonWebKey): JsonWebKey {
+  try {
+    const serialized = JSON.stringify(jwk);
+    if (serialized === undefined) {
+      throw new TypeError("Web Crypto returned an unserializable JWK");
+    }
+    return JSON.parse(serialized) as JsonWebKey;
+  } catch {
+    throw new Es256KeyError("Web Crypto returned an invalid JWK");
+  }
 }
 
 function assertCommonEs256Jwk(record: Record<string, unknown>): void {
