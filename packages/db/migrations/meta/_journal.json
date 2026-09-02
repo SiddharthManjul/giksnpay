@@ -85,6 +85,13 @@
       "when": 1788150254550,
       "tag": "0011_phase-07-payments",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1788340150025,
+      "tag": "0012_agent_model_capacity",
+      "breakpoints": true
     }
   ]
 }
