@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   account,
   agentKeys,
+  agentModelCapacityLeases,
+  agentModelUsageWindows,
   agentRunEvents,
   agentRunEventTypes,
   agentRunSources,
@@ -72,6 +74,8 @@ describe("MindPay D1 schema", () => {
     ).toEqual([
       "account",
       "agent_keys",
+      "agent_model_capacity_leases",
+      "agent_model_usage_windows",
       "agent_run_events",
       "agent_runs",
       "agent_tool_calls",
@@ -156,6 +160,15 @@ describe("MindPay D1 schema", () => {
       "updated_at",
     ]);
     expect(columnNames(rateLimit)).toEqual(["id", "key", "count", "last_request"]);
+  });
+
+  it("isolates model capacity leases and token budgets from authentication rate limits", () => {
+    expect(columnNames(agentModelCapacityLeases)).toEqual(["key", "lease_id", "expires_at"]);
+    expect(columnNames(agentModelUsageWindows)).toEqual([
+      "key",
+      "used_tokens",
+      "window_started_at",
+    ]);
   });
 
   it("stores only public passkey credential material and session-bound challenges", () => {
