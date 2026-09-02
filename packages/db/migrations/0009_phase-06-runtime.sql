@@ -1,4 +1,4 @@
-PRAGMA foreign_keys=OFF;--> statement-breakpoint
+PRAGMA defer_foreign_keys=ON;--> statement-breakpoint
 DROP TRIGGER transaction_approvals_require_tenant_binding;--> statement-breakpoint
 CREATE TABLE `__new_approval_challenges` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE `__new_approval_challenges` (
 INSERT INTO `__new_approval_challenges`("id", "organization_id", "user_id", "session_id", "mandate_id", "credential_id", "transaction_id", "rp_id", "origin", "purpose", "challenge_hash", "payload_hash", "state", "expires_at", "consumed_at", "created_at") SELECT "id", "organization_id", "user_id", NULL, NULL, NULL, "transaction_id", NULL, NULL, "purpose", "challenge_hash", "payload_hash", "state", "expires_at", "consumed_at", "created_at" FROM `approval_challenges`;--> statement-breakpoint
 DROP TABLE `approval_challenges`;--> statement-breakpoint
 ALTER TABLE `__new_approval_challenges` RENAME TO `approval_challenges`;--> statement-breakpoint
-PRAGMA foreign_keys=ON;--> statement-breakpoint
+PRAGMA defer_foreign_keys=OFF;--> statement-breakpoint
 CREATE UNIQUE INDEX `approval_challenges_hash_uq` ON `approval_challenges` (`challenge_hash`);--> statement-breakpoint
 CREATE INDEX `approval_challenges_user_state_idx` ON `approval_challenges` (`user_id`,`state`);--> statement-breakpoint
 CREATE INDEX `approval_challenges_context_idx` ON `approval_challenges` (`organization_id`,`user_id`,`session_id`,`purpose`,`state`);--> statement-breakpoint
@@ -135,7 +135,7 @@ BEGIN
     AND NEW.amount_subunits <= max_transaction_subunits
     AND completed_transactions < max_transactions
     AND spent_subunits + reserved_subunits + NEW.amount_subunits <= budget_subunits;
-  SELECT CASE WHEN changes() != 1 THEN RAISE(ABORT, 'budget unavailable') END;
+  SELECT RAISE(ABORT, 'budget unavailable') WHERE changes() != 1;
 END;--> statement-breakpoint
 CREATE TRIGGER spend_reservations_commit_budget
 BEFORE UPDATE OF status ON spend_reservations
@@ -146,22 +146,20 @@ BEGIN
   SET reserved_subunits = reserved_subunits - OLD.amount_subunits,
       spent_subunits = spent_subunits + OLD.amount_subunits,
       completed_transactions = completed_transactions + 1,
-      status = CASE
-        WHEN spent_subunits + OLD.amount_subunits >= budget_subunits
-          OR completed_transactions + 1 >= max_transactions THEN 'EXHAUSTED'
-        ELSE status
-      END,
-      terminal_at = CASE
-        WHEN spent_subunits + OLD.amount_subunits >= budget_subunits
-          OR completed_transactions + 1 >= max_transactions THEN NEW.closed_at
-        ELSE terminal_at
-      END,
       updated_at = NEW.updated_at
   WHERE id = OLD.mandate_id
     AND organization_id = OLD.organization_id
     AND status = 'ACTIVE'
     AND reserved_subunits >= OLD.amount_subunits;
-  SELECT CASE WHEN changes() != 1 THEN RAISE(ABORT, 'reserved budget cannot be committed') END;
+  SELECT RAISE(ABORT, 'reserved budget cannot be committed') WHERE changes() != 1;
+  UPDATE mandates
+  SET status = 'EXHAUSTED',
+      terminal_at = NEW.closed_at,
+      updated_at = NEW.updated_at
+  WHERE id = OLD.mandate_id
+    AND organization_id = OLD.organization_id
+    AND status = 'ACTIVE'
+    AND (spent_subunits >= budget_subunits OR completed_transactions >= max_transactions);
 END;--> statement-breakpoint
 CREATE TRIGGER spend_reservations_release_budget
 BEFORE UPDATE OF status ON spend_reservations
@@ -174,7 +172,7 @@ BEGIN
   WHERE id = OLD.mandate_id
     AND organization_id = OLD.organization_id
     AND reserved_subunits >= OLD.amount_subunits;
-  SELECT CASE WHEN changes() != 1 THEN RAISE(ABORT, 'reserved budget cannot be released') END;
+  SELECT RAISE(ABORT, 'reserved budget cannot be released') WHERE changes() != 1;
 END;--> statement-breakpoint
 CREATE TRIGGER spend_reservations_terminal_once
 BEFORE UPDATE OF status ON spend_reservations
