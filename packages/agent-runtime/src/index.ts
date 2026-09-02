@@ -1,11 +1,9 @@
-export {
-  type AgentEncryptedSigningKey,
-  AgentKeyConfigurationError,
-  createAgentEncryptedSigningKey,
-  importAgentKeyEncryptionKey,
-  loadAgentPrivateSigningKey,
-} from "./signing-keys";
 export { createConfiguredModelProvider } from "./configured-model-provider";
+export {
+  createGoogleModelProvider,
+  type GoogleModelProviderConfiguration,
+  type GoogleModelProviderSdk,
+} from "./google-model-provider";
 export {
   type ProcurementEvaluationCase,
   type ProcurementEvaluationKind,
@@ -23,12 +21,19 @@ export {
   ModelProviderAbortedError,
   ModelProviderConfigurationError,
   ModelProviderInputError,
-  type ModelTokenUsage,
   ModelProviderUnavailableError,
+  type ModelTokenUsage,
   type StructuredGenerationInput,
   type StructuredGenerationResult,
 } from "./model-provider";
 export { procurementDecisionSummary, selectProcurementService } from "./procurement";
+export {
+  type AgentEncryptedSigningKey,
+  AgentKeyConfigurationError,
+  createAgentEncryptedSigningKey,
+  importAgentKeyEncryptionKey,
+  loadAgentPrivateSigningKey,
+} from "./signing-keys";
 export {
   type BoundToolRegistry,
   type BoundToolRegistryOptions,
