@@ -13,12 +13,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/google": "catalog:",
     "@ai-sdk/openai": "catalog:",
     "@mindpay/config": "workspace:*",
     "@mindpay/contracts": "workspace:*",
     "@mindpay/crypto": "workspace:*",
     "ai": "catalog:",
     "zod": "catalog:"
-  },
-  "devDependencies": {}
+  }
 }
