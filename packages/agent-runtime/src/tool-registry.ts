@@ -1,7 +1,7 @@
 import {
   type AgentToolBinding,
-  agentToolBindingsSchema,
   type AgentToolVersionId,
+  agentToolBindingsSchema,
   getVerifiedServiceOutputSchema,
   proposePurchaseInputSchema,
   proposePurchaseOutputSchema,
