@@ -40,6 +40,22 @@ const passkeyRpIdSchema = z
     "Passkey RP ID must be a canonical DNS name or localhost",
   );
 
+const reservedProductionHostnameSuffixes = [".example", ".invalid", ".localhost", ".test"] as const;
+
+function isReservedProductionHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase().replace(/\.$/u, "");
+  return (
+    normalized === "localhost" ||
+    reservedProductionHostnameSuffixes.some(
+      (suffix) => normalized === suffix.slice(1) || normalized.endsWith(suffix),
+    )
+  );
+}
+
+function isWithinRpId(hostname: string, rpId: string): boolean {
+  return hostname === rpId || hostname.endsWith(`.${rpId}`);
+}
+
 export const signalWorksKeyEncryptionSecretSchema = z
   .string()
   .regex(
@@ -54,7 +70,7 @@ export const agentKeyEncryptionSecretSchema = z
     "Agent key encryption secret must be 32 bytes of unpadded base64url",
   );
 
-export const modelProviderNameSchema = z.enum(["openai"]);
+export const modelProviderNameSchema = z.enum(["google", "openai"]);
 
 export const modelNameSchema = z
   .string()
@@ -62,8 +78,8 @@ export const modelNameSchema = z
   .min(1, "Model name is required")
   .max(128, "Model name cannot exceed 128 characters")
   .regex(
-    /^[A-Za-z0-9][A-Za-z0-9._:-]*$/u,
-    "Model name must contain only letters, numbers, dots, underscores, colons, and hyphens",
+    /^[A-Za-z0-9][A-Za-z0-9._:-]*(?:\/[A-Za-z0-9][A-Za-z0-9._:-]*)?$/u,
+    "Model name must be a safe model ID with at most one provider namespace",
   );
 
 export const modelProviderApiKeySchema = z
@@ -106,10 +122,9 @@ export const gatewayAuthEnvironmentSchema = z
   })
   .strict()
   .superRefine((environment, context) => {
-    if (
-      (environment.ENVIRONMENT === "preview" || environment.ENVIRONMENT === "production") &&
-      !environment.BETTER_AUTH_URL.startsWith("https://")
-    ) {
+    const isPublicEnvironment =
+      environment.ENVIRONMENT === "preview" || environment.ENVIRONMENT === "production";
+    if (isPublicEnvironment && !environment.BETTER_AUTH_URL.startsWith("https://")) {
       context.addIssue({
         code: "custom",
         message: "Preview and production authentication require an HTTPS base URL",
@@ -118,7 +133,7 @@ export const gatewayAuthEnvironmentSchema = z
     }
 
     if (
-      (environment.ENVIRONMENT === "preview" || environment.ENVIRONMENT === "production") &&
+      isPublicEnvironment &&
       environment.TRUSTED_ORIGINS.some((origin) => !origin.startsWith("https://"))
     ) {
       context.addIssue({
@@ -128,12 +143,37 @@ export const gatewayAuthEnvironmentSchema = z
       });
     }
 
+    if (isPublicEnvironment) {
+      const authHostname = new URL(environment.BETTER_AUTH_URL).hostname.toLowerCase();
+      if (
+        isReservedProductionHostname(authHostname) ||
+        isReservedProductionHostname(environment.PASSKEY_RP_ID)
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: "Preview and production authentication require public DNS names",
+          path: ["BETTER_AUTH_URL"],
+        });
+      }
+      if (!isWithinRpId(authHostname, environment.PASSKEY_RP_ID)) {
+        context.addIssue({
+          code: "custom",
+          message: "The authentication URL must be within the passkey RP ID",
+          path: ["BETTER_AUTH_URL"],
+        });
+      }
+    }
+
     for (const [index, origin] of environment.TRUSTED_ORIGINS.entries()) {
       const hostname = new URL(origin).hostname.toLowerCase();
-      if (
-        hostname !== environment.PASSKEY_RP_ID &&
-        !hostname.endsWith(`.${environment.PASSKEY_RP_ID}`)
-      ) {
+      if (isPublicEnvironment && isReservedProductionHostname(hostname)) {
+        context.addIssue({
+          code: "custom",
+          message: "Preview and production trusted origins require public DNS names",
+          path: ["TRUSTED_ORIGINS", index],
+        });
+      }
+      if (!isWithinRpId(hostname, environment.PASSKEY_RP_ID)) {
         context.addIssue({
           code: "custom",
           message: "Every trusted origin must be within the passkey RP ID",
@@ -169,12 +209,22 @@ export const signalWorksPaymentEnvironmentSchema = z
   .readonly();
 
 export const modelProviderEnvironmentSchema = z
-  .object({
-    AGENT_MODEL_NAME: modelNameSchema,
-    AGENT_MODEL_PROVIDER: modelProviderNameSchema,
-    OPENAI_API_KEY: modelProviderApiKeySchema,
-  })
-  .strict()
+  .discriminatedUnion("AGENT_MODEL_PROVIDER", [
+    z
+      .object({
+        AGENT_MODEL_NAME: modelNameSchema,
+        AGENT_MODEL_PROVIDER: z.literal("google"),
+        GOOGLE_GENERATIVE_AI_API_KEY: modelProviderApiKeySchema,
+      })
+      .strict(),
+    z
+      .object({
+        AGENT_MODEL_NAME: modelNameSchema,
+        AGENT_MODEL_PROVIDER: z.literal("openai"),
+        OPENAI_API_KEY: modelProviderApiKeySchema,
+      })
+      .strict(),
+  ])
   .readonly();
 
 export type RuntimeEnvironment = z.infer<typeof runtimeEnvironmentSchema>;
