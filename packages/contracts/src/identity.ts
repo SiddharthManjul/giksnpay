@@ -1,9 +1,9 @@
 import {
   getOrganizationCapabilities,
+  type OrganizationRole,
   organizationCapabilities,
   organizationCapabilitySchema,
   organizationRoleSchema,
-  type OrganizationRole,
   utcTimestampSchema,
 } from "@mindpay/domain";
 import { z } from "zod";
@@ -138,6 +138,7 @@ export const apiErrorCodeSchema = z.enum([
   "AGENT_KEY_CONFIGURATION_INVALID",
   "AGENT_RUN_FAILED",
   "AGENT_RUN_NOT_EXECUTABLE",
+  "AGENT_RUN_RATE_LIMITED",
   "AGENT_STATE_CONFLICT",
   "AGENT_VERSION_CONFLICT",
   "AUTHENTICATION_REQUIRED",
