@@ -1,14 +1,15 @@
 import type { LanguageModelUsage, TextStreamPart, ToolSet } from "ai";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createConfiguredModelProvider } from "./configured-model-provider";
+import { createGoogleModelProvider, type GoogleModelProviderSdk } from "./google-model-provider";
 import {
   InvalidStructuredModelOutputError,
   ModelProviderConfigurationError,
   ModelProviderInputError,
   ModelProviderUnavailableError,
 } from "./model-provider";
-import { createOpenAIModelProvider, type OpenAIModelProviderSdk } from "./openai-model-provider";
+import { createOpenAIModelProvider } from "./openai-model-provider";
 
 const requestSchema = z
   .object({
@@ -42,12 +43,16 @@ const usage: LanguageModelUsage = {
   totalTokens: 15,
 };
 
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe("configured model provider", () => {
-  it("selects the configured real provider without exposing its implementation", () => {
+  it("selects Google Gemini without exposing its implementation", () => {
     const provider = createConfiguredModelProvider({
-      AGENT_MODEL_NAME: "gpt-5-mini",
-      AGENT_MODEL_PROVIDER: "openai",
-      OPENAI_API_KEY: "mindpay_test_openai_key_00000001",
+      AGENT_MODEL_NAME: "gemini-3.8-flash",
+      AGENT_MODEL_PROVIDER: "google",
+      GOOGLE_GENERATIVE_AI_API_KEY: "mindpay_test_google_key_00000001",
     });
 
     expect(provider).toMatchObject({
@@ -60,21 +65,88 @@ describe("configured model provider", () => {
     for (const environment of [
       {},
       {
-        AGENT_MODEL_NAME: "gpt-5-mini",
+        AGENT_MODEL_NAME: "gemini-3.8-flash",
         AGENT_MODEL_PROVIDER: "unsupported",
-        OPENAI_API_KEY: "mindpay_test_openai_key_00000001",
+        GOOGLE_GENERATIVE_AI_API_KEY: "mindpay_test_google_key_00000001",
       },
       {
-        AGENT_MODEL_NAME: "gpt-5-mini",
-        AGENT_MODEL_PROVIDER: "openai",
-        OPENAI_API_KEY: "mindpay_test_openai_key_00000001",
-        OPENAI_BASE_URL: "https://unapproved-provider.test",
+        AGENT_MODEL_NAME: "gemini-3.8-flash",
+        AGENT_MODEL_PROVIDER: "google",
+        GOOGLE_BASE_URL: "https://unapproved-provider.test",
+        GOOGLE_GENERATIVE_AI_API_KEY: "mindpay_test_google_key_00000001",
       },
     ]) {
       expect(() => createConfiguredModelProvider(environment)).toThrow(
         ModelProviderConfigurationError,
       );
     }
+  });
+
+  it("labels Google and optional OpenAI output at the provider-neutral boundary", async () => {
+    const google = createGoogleModelProvider(testConfiguration, fakeSdk({}));
+    const openAI = createOpenAIModelProvider(
+      { apiKey: "mindpay_test_openai_key_00000001", model: "gpt-5-mini" },
+      fakeSdk({}),
+    );
+
+    await expect(google.generateStructured(generationInput)).resolves.toMatchObject({
+      model: "gemini-3.8-flash",
+      provider: "google",
+    });
+    await expect(openAI.streamAgentRun(generationInput)).resolves.toMatchObject({
+      model: "gpt-5-mini",
+      provider: "openai",
+    });
+  });
+});
+
+describe("Google Gemini boundary", () => {
+  it("uses Google's fixed API endpoint and native structured output", async () => {
+    const upstreamFetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      Response.json({
+        candidates: [
+          {
+            content: {
+              parts: [{ text: '{"maximumPriceMinor":40000,"serviceId":"svc_research"}' }],
+              role: "model",
+            },
+            finishReason: "STOP",
+          },
+        ],
+        responseId: "gemini_mindpay_test",
+        usageMetadata: {
+          candidatesTokenCount: 5,
+          promptTokenCount: 10,
+          totalTokenCount: 15,
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", upstreamFetch);
+
+    const provider = createGoogleModelProvider(testConfiguration);
+    await expect(provider.generateStructured(generationInput)).resolves.toMatchObject({
+      attempts: 1,
+      model: "gemini-3.8-flash",
+      output: { maximumPriceMinor: 40_000, serviceId: "svc_research" },
+      provider: "google",
+    });
+
+    expect(upstreamFetch).toHaveBeenCalledTimes(1);
+    const [input, init] = upstreamFetch.mock.calls[0] ?? [];
+    expect(String(input)).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
+    );
+    const headers = new Headers(init?.headers);
+    expect(headers.get("x-goog-api-key")).toBe("mindpay_test_google_key_00000001");
+    const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    expect(body).toMatchObject({
+      generationConfig: {
+        maxOutputTokens: 1_024,
+        responseMimeType: "application/json",
+        thinkingConfig: { includeThoughts: false, thinkingLevel: "low" },
+      },
+    });
+    expect(JSON.stringify(body)).not.toContain("mindpay_test_google_key_00000001");
   });
 });
 
@@ -87,28 +159,28 @@ describe("structured generation", () => {
         usage,
       })),
     });
-    const provider = createOpenAIModelProvider(testConfiguration, sdk);
+    const provider = createGoogleModelProvider(testConfiguration, sdk);
 
     await expect(provider.generateStructured(generationInput)).resolves.toEqual({
       attempts: 1,
       finishReason: "stop",
-      model: "gpt-5-mini",
+      model: "gemini-3.8-flash",
       output: { maximumPriceMinor: 40_000, serviceId: "svc_research" },
-      provider: "openai",
+      provider: "google",
       usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
     });
   });
 
   it("retries one invalid response and accepts a valid repaired response", async () => {
     const generateStructured = vi
-      .fn<OpenAIModelProviderSdk["generateStructured"]>()
+      .fn<GoogleModelProviderSdk["generateStructured"]>()
       .mockResolvedValueOnce({ finishReason: "stop", output: { serviceId: 99 }, usage })
       .mockResolvedValueOnce({
         finishReason: "stop",
         output: { maximumPriceMinor: 29_900, serviceId: "svc_competitor_research" },
         usage,
       });
-    const provider = createOpenAIModelProvider(testConfiguration, fakeSdk({ generateStructured }));
+    const provider = createGoogleModelProvider(testConfiguration, fakeSdk({ generateStructured }));
 
     const result = await provider.generateStructured(generationInput);
     expect(result.attempts).toBe(2);
@@ -122,7 +194,7 @@ describe("structured generation", () => {
       output: { maximumPriceMinor: -1, serviceId: "" },
       usage,
     }));
-    const provider = createOpenAIModelProvider(testConfiguration, fakeSdk({ generateStructured }));
+    const provider = createGoogleModelProvider(testConfiguration, fakeSdk({ generateStructured }));
     const commerceOrchestration = vi.fn();
 
     try {
@@ -138,7 +210,7 @@ describe("structured generation", () => {
   });
 
   it("maps provider faults to a stable error without leaking the upstream message", async () => {
-    const provider = createOpenAIModelProvider(
+    const provider = createGoogleModelProvider(
       testConfiguration,
       fakeSdk({
         generateStructured: vi.fn(async () => {
@@ -156,13 +228,13 @@ describe("structured generation", () => {
 describe("agent-run streaming", () => {
   it("exposes only text deltas and terminal metadata, never provider reasoning", async () => {
     const sdk = fakeSdk({ stream: safeProviderStream });
-    const provider = createOpenAIModelProvider(testConfiguration, sdk);
+    const provider = createGoogleModelProvider(testConfiguration, sdk);
     const stream = await provider.streamAgentRun(generationInput);
     const events = [];
 
     for await (const event of stream) events.push(event);
 
-    expect(stream).toMatchObject({ model: "gpt-5-mini", provider: "openai" });
+    expect(stream).toMatchObject({ model: "gemini-3.8-flash", provider: "google" });
     expect(events).toEqual([
       { text: "I found ", type: "text-delta" },
       { text: "a verified service.", type: "text-delta" },
@@ -177,7 +249,7 @@ describe("agent-run streaming", () => {
 
   it("rejects malformed requests before invoking the provider", async () => {
     const stream = vi.fn(safeProviderStream);
-    const provider = createOpenAIModelProvider(testConfiguration, fakeSdk({ stream }));
+    const provider = createGoogleModelProvider(testConfiguration, fakeSdk({ stream }));
 
     await expect(
       provider.streamAgentRun({
@@ -186,11 +258,18 @@ describe("agent-run streaming", () => {
         system: generationInput.system,
       }),
     ).rejects.toBeInstanceOf(ModelProviderInputError);
+    await expect(
+      provider.streamAgentRun({
+        maxOutputTokens: 2_049,
+        messages: generationInput.messages,
+        system: generationInput.system,
+      }),
+    ).rejects.toBeInstanceOf(ModelProviderInputError);
     expect(stream).not.toHaveBeenCalled();
   });
 
   it("fails a stream that ends without canonical finish metadata", async () => {
-    const provider = createOpenAIModelProvider(
+    const provider = createGoogleModelProvider(
       testConfiguration,
       fakeSdk({
         stream: async function* () {
@@ -205,11 +284,11 @@ describe("agent-run streaming", () => {
 });
 
 const testConfiguration = {
-  apiKey: "mindpay_test_openai_key_00000001",
-  model: "gpt-5-mini",
+  apiKey: "mindpay_test_google_key_00000001",
+  model: "gemini-3.8-flash",
 } as const;
 
-function fakeSdk(overrides: Partial<OpenAIModelProviderSdk>): OpenAIModelProviderSdk {
+function fakeSdk(overrides: Partial<GoogleModelProviderSdk>): GoogleModelProviderSdk {
   return {
     generateStructured: async () => ({
       finishReason: "stop",
