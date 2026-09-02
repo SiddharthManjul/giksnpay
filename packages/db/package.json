@@ -10,6 +10,7 @@
     "build": "tsc --project tsconfig.build.json",
     "clean": "rm -rf coverage dist",
     "generate": "drizzle-kit generate --config drizzle.config.ts",
+    "migrations:apply": "wrangler d1 migrations apply mindpay --local --config wrangler.jsonc --persist-to ../../apps/gateway/.wrangler/state",
     "migrations:verify": "node ./scripts/verify-migrations.mjs",
     "test": "pnpm migrations:verify && vitest run",
     "typecheck": "tsc --noEmit"
