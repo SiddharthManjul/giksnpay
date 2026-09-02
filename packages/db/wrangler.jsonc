@@ -6,8 +6,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "mindpay-local",
-      "database_id": "00000000-0000-0000-0000-000000000001",
+      "database_name": "mindpay",
+      "database_id": "d8cca5e3-5034-4e39-be06-469e44ec8b93",
       "migrations_dir": "migrations"
     }
   ]
