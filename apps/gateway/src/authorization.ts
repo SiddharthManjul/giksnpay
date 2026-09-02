@@ -6,9 +6,9 @@ import {
 import {
   createMindPayDatabase,
   demoWorkspaces,
+  type Organization,
   organizationMembers,
   organizations,
-  type Organization,
 } from "@mindpay/db";
 import {
   hasOrganizationCapability,
@@ -136,7 +136,7 @@ export function resourceNotFound(context: ApiErrorContext) {
 
 export function apiError(
   context: ApiErrorContext,
-  status: 400 | 401 | 403 | 404 | 409 | 500,
+  status: 400 | 401 | 403 | 404 | 409 | 429 | 500,
   code: ApiErrorCode,
   message: string,
 ) {
@@ -146,6 +146,6 @@ export function apiError(
 interface ApiErrorContext {
   json: (
     body: ReturnType<typeof apiErrorResponseSchema.parse>,
-    status: 400 | 401 | 403 | 404 | 409 | 500,
+    status: 400 | 401 | 403 | 404 | 409 | 429 | 500,
   ) => Response;
 }
