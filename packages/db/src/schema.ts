@@ -229,6 +229,46 @@ export const rateLimit = sqliteTable(
   ],
 );
 
+export const agentModelCapacityLeases = sqliteTable(
+  "agent_model_capacity_leases",
+  {
+    key: text("key").primaryKey(),
+    leaseId: text("lease_id").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("agent_model_capacity_leases_lease_id_uq").on(table.leaseId),
+    index("agent_model_capacity_leases_expires_at_idx").on(table.expiresAt),
+    check(
+      "agent_model_capacity_leases_key_not_blank",
+      sql`length(trim(${table.key})) between 1 and 1024`,
+    ),
+    check(
+      "agent_model_capacity_leases_lease_id_not_blank",
+      sql`length(trim(${table.leaseId})) between 1 and 128`,
+    ),
+    check("agent_model_capacity_leases_expiry_positive", sql`${table.expiresAt} > 0`),
+  ],
+);
+
+export const agentModelUsageWindows = sqliteTable(
+  "agent_model_usage_windows",
+  {
+    key: text("key").primaryKey(),
+    usedTokens: integer("used_tokens").notNull(),
+    windowStartedAt: integer("window_started_at").notNull(),
+  },
+  (table) => [
+    index("agent_model_usage_windows_started_at_idx").on(table.windowStartedAt),
+    check(
+      "agent_model_usage_windows_key_not_blank",
+      sql`length(trim(${table.key})) between 1 and 1024`,
+    ),
+    check("agent_model_usage_windows_tokens_positive", sql`${table.usedTokens} > 0`),
+    check("agent_model_usage_windows_started_at_positive", sql`${table.windowStartedAt} > 0`),
+  ],
+);
+
 export const passkeyCredentials = sqliteTable(
   "passkey_credentials",
   {
@@ -1812,6 +1852,8 @@ export const marketplaceCacheVersions = sqliteTable(
 export const schema = {
   account,
   agentKeys,
+  agentModelCapacityLeases,
+  agentModelUsageWindows,
   agentRunEvents,
   agentRuns,
   agentToolCalls,
@@ -1860,6 +1902,10 @@ export type Verification = typeof verification.$inferSelect;
 export type NewVerification = typeof verification.$inferInsert;
 export type RateLimit = typeof rateLimit.$inferSelect;
 export type NewRateLimit = typeof rateLimit.$inferInsert;
+export type AgentModelCapacityLease = typeof agentModelCapacityLeases.$inferSelect;
+export type NewAgentModelCapacityLease = typeof agentModelCapacityLeases.$inferInsert;
+export type AgentModelUsageWindow = typeof agentModelUsageWindows.$inferSelect;
+export type NewAgentModelUsageWindow = typeof agentModelUsageWindows.$inferInsert;
 export type DemoWorkspace = typeof demoWorkspaces.$inferSelect;
 export type NewDemoWorkspace = typeof demoWorkspaces.$inferInsert;
 export type PasskeyCredential = typeof passkeyCredentials.$inferSelect;
