@@ -12,7 +12,7 @@ const agentMessageSchema = z
 
 const generationSettingsSchema = z
   .object({
-    maxOutputTokens: z.number().int().min(1).max(32_768).optional(),
+    maxOutputTokens: z.number().int().min(1).max(2_048).optional(),
     temperature: z.number().min(0).max(2).optional(),
   })
   .strict();
