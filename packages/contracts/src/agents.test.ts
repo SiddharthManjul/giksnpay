@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  agentConfigurationSchema,
   agentResponseSchema,
   createAgentRequestSchema,
   createAgentVersionRequestSchema,
@@ -27,6 +28,9 @@ describe("agent API contracts", () => {
   });
 
   it("rejects unknown input and never permits encrypted key fields in responses", () => {
+    expect(() =>
+      agentConfigurationSchema.parse({ maxOutputTokens: 2_049, temperature: 0.2 }),
+    ).toThrow();
     expect(() =>
       createAgentRequestSchema.parse({
         description: "Procures verified competitor research within user constraints.",
