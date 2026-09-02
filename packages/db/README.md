@@ -54,6 +54,11 @@ parent references, identity triggers freeze signed and monetary inputs, and ever
 indexed retention deadline with a pre-expiry delete guard. Parent foreign keys use `RESTRICT`, so
 organization cleanup cannot silently remove retained payment evidence.
 
+The thirteenth migration isolates AI concurrency leases and minute token-usage windows from Better
+Auth's framework-owned rate-limit table. This prevents authentication cleanup behavior from
+changing the model capacity boundary, while indexed expiry and window timestamps keep cleanup
+bounded.
+
 Timestamps are UTC epoch milliseconds. JSON columns are storage-only values and must still be
 validated by their owning contract before insertion and after retrieval.
 
