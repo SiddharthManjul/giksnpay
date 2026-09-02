@@ -1,11 +1,13 @@
 # MindPay implementation status
 
-Last updated: 2026-08-30
+Last updated: 2026-09-03
 
 ## Current phase
 
-Phases 0 through 6 are complete. The next ticket is MP-0701, Razorpay Test Mode configuration and
-secret validation.
+Phases 0 through 6 are complete. Phase 7 implementation and deterministic verification are
+complete; MP-0709 still requires recorded live Razorpay Test Mode success and failure/retry evidence.
+The next implementation ticket is MP-0801, entitlement, redemption, MCP, and delivery-receipt
+contracts.
 
 ## Phase progress
 
@@ -18,7 +20,7 @@ secret validation.
 | 4. Marketplace and verification | Complete | Only verified services are discoverable |
 | 5. Agents and runtime | Complete | Typed approved tools and manual fallback work |
 | 6. Mandates, policy, and risk | Complete | ₹299 allows, ₹449 reviews, and ₹799 blocks |
-| 7. Razorpay Test Mode | Not started | Success, failure, deduplication, and reconciliation pass |
+| 7. Razorpay Test Mode | Implementation complete; live exit evidence pending | Success, failure, deduplication, and reconciliation pass |
 | 8. Entitlements and MCP | Not started | A paid entitlement redeems exactly once |
 | 9. Audit and evidence | Not started | Public verification detects any mutation |
 | 10. Frontend completion | Not started | Critical flows work accessibly on supported viewports |
