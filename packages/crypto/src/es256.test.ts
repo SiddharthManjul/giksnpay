@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { base64UrlToBytes, bytesToBase64Url, toBytes } from "./bytes";
 import {
   ES256_SIGNATURE_BYTE_LENGTH,
@@ -37,6 +37,39 @@ describe("ES256 primitives and JWKs", () => {
 
     expect(signature).toHaveLength(ES256_SIGNATURE_BYTE_LENGTH);
     expect(await verifyEs256(importedPublicKey, toBytes("mindpay"), signature)).toBe(true);
+  });
+
+  it("normalizes trusted Web Crypto JWK exports from runtime-specific object realms", async () => {
+    const generated = await generateEs256KeyPair(true);
+    const nativePrivateJwk = await crypto.subtle.exportKey("jwk", generated.privateKey);
+    const nativePublicJwk = await crypto.subtle.exportKey("jwk", generated.publicKey);
+    const runtimePrivateJwk = Object.assign(
+      Object.create({ runtime: "workerd" }),
+      nativePrivateJwk,
+    ) as JsonWebKey;
+    const runtimePublicJwk = Object.assign(
+      Object.create({ runtime: "workerd" }),
+      nativePublicJwk,
+    ) as JsonWebKey;
+    const exportKey = vi
+      .spyOn(crypto.subtle, "exportKey")
+      .mockResolvedValueOnce(runtimePrivateJwk)
+      .mockResolvedValueOnce(runtimePublicJwk);
+
+    try {
+      const privateJwk = await exportEs256PrivateJwk(generated.privateKey);
+      const publicJwk = await exportEs256PublicJwk(generated.publicKey);
+      expect(privateJwk).toMatchObject({ crv: "P-256", kty: "EC" });
+      expect(privateJwk).toHaveProperty("d");
+      expect(publicJwk).toMatchObject({ crv: "P-256", kty: "EC" });
+      expect(publicJwk).not.toHaveProperty("d");
+      expect(Object.getPrototypeOf(privateJwk)).toBe(Object.prototype);
+      expect(Object.getPrototypeOf(publicJwk)).toBe(Object.prototype);
+      expect(Object.isFrozen(privateJwk)).toBe(true);
+      expect(Object.isFrozen(publicJwk)).toBe(true);
+    } finally {
+      exportKey.mockRestore();
+    }
   });
 
   it("rejects one-byte message and signature mutations", async () => {
