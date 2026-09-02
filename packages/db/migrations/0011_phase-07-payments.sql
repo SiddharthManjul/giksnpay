@@ -4,7 +4,7 @@ DROP TRIGGER `provider_events_require_tenant_binding`;--> statement-breakpoint
 DROP TRIGGER `payment_attempts_require_tenant_binding`;--> statement-breakpoint
 DROP TRIGGER `payment_attempts_identity_immutable`;--> statement-breakpoint
 DROP TRIGGER `payment_attempts_retention_guard`;--> statement-breakpoint
-PRAGMA foreign_keys=OFF;--> statement-breakpoint
+PRAGMA defer_foreign_keys=ON;--> statement-breakpoint
 CREATE TABLE `__new_payment_attempts` (
 	`id` text PRIMARY KEY NOT NULL,
 	`organization_id` text NOT NULL,
@@ -65,7 +65,7 @@ CREATE TABLE `__new_payment_attempts` (
 INSERT INTO `__new_payment_attempts`("id", "organization_id", "transaction_id", "mandate_id", "attempt_number", "amount_subunits", "currency", "status", "checkout_hash", "provider", "provider_order_id", "failure_code", "completed_at", "retention_expires_at", "created_at", "updated_at") SELECT "id", "organization_id", "transaction_id", "mandate_id", "attempt_number", "amount_subunits", "currency", "status", "checkout_hash", "provider", "provider_order_id", "failure_code", "completed_at", "retention_expires_at", "created_at", "updated_at" FROM `payment_attempts`;--> statement-breakpoint
 DROP TABLE `payment_attempts`;--> statement-breakpoint
 ALTER TABLE `__new_payment_attempts` RENAME TO `payment_attempts`;--> statement-breakpoint
-PRAGMA foreign_keys=ON;--> statement-breakpoint
+PRAGMA defer_foreign_keys=OFF;--> statement-breakpoint
 CREATE UNIQUE INDEX `payment_attempts_transaction_number_uq` ON `payment_attempts` (`transaction_id`,`attempt_number`);--> statement-breakpoint
 CREATE UNIQUE INDEX `payment_attempts_provider_order_uq` ON `payment_attempts` (`provider`,`provider_order_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `payment_attempts_provider_payment_uq` ON `payment_attempts` (`provider`,`provider_payment_id`);--> statement-breakpoint
