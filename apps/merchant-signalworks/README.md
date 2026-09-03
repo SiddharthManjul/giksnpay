@@ -22,6 +22,13 @@ Production and preview values must be provisioned as the
 `SIGNALWORKS_KEY_ENCRYPTION_KEY` Worker secret. They must never be stored in `wrangler.jsonc`, source
 control, logs, public manifests, or browser responses.
 
+The local Wrangler configuration cannot publish to `workers.dev`. Production uses the separate,
+explicit configuration after all merchant-owned secrets have been provisioned:
+
+```bash
+pnpm --filter @mindpay/merchant-signalworks deploy
+```
+
 Also generate a separate high-entropy `SIGNALWORKS_MACHINE_AUTH_TOKEN` with at least 32 printable
 ASCII characters. The seed stores only its SHA-256 digest in D1. MindPay Gateway supplies the
 plaintext as a bearer token; it is never returned or written to checkout, event, or idempotency
