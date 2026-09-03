@@ -4,31 +4,32 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-08-28",
   "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
   "observability": {
     "enabled": true
   },
   "vars": {
-    "AGENT_MODEL_NAME": "gpt-5-mini",
-    "AGENT_MODEL_PROVIDER": "openai",
+    "AGENT_MODEL_NAME": "gemini-3.8-flash",
+    "AGENT_MODEL_PROVIDER": "google",
     "BETTER_AUTH_URL": "http://localhost:8787",
     "ENVIRONMENT": "development",
     "MINDPAY_API_AUDIENCE": "https://api.mindpay.example/",
     "PASSKEY_RP_ID": "localhost",
-    "TRUSTED_ORIGINS": "http://localhost:3000"
+    "TRUSTED_ORIGINS": "http://localhost:3100"
   },
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "mindpay-local",
-      "database_id": "00000000-0000-0000-0000-000000000001",
+      "database_name": "mindpay",
+      "database_id": "d8cca5e3-5034-4e39-be06-469e44ec8b93",
       "migrations_dir": "../../packages/db/migrations"
     }
   ],
   "kv_namespaces": [
     {
       "binding": "MARKETPLACE_CACHE",
-      "id": "00000000000000000000000000000001",
-      "preview_id": "00000000000000000000000000000001"
+      "id": "b03cb0ab9a714505be07d26fa6d090db",
+      "preview_id": "b03cb0ab9a714505be07d26fa6d090db"
     }
   ],
   "services": [
