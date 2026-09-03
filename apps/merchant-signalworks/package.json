@@ -6,8 +6,8 @@
   "scripts": {
     "build": "WRANGLER_LOG=none WRANGLER_SEND_METRICS=false wrangler deploy --dry-run --outdir dist",
     "clean": "rm -rf coverage dist",
-    "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --config wrangler.production.jsonc",
+    "dev": "wrangler dev --port 8788 --inspector-port 9230",
     "seed:local": "tsx ./scripts/seed-local.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
