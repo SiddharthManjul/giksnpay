@@ -1,8 +1,8 @@
 import {
   agentIdSchema,
   authenticatorTransportSchema,
-  merchantHttpsUrlSchema,
   mandateIdSchema,
+  merchantHttpsUrlSchema,
   openCheckoutMandateSchema,
   openPaymentMandateSchema,
   passkeyCredentialIdSchema,
@@ -16,8 +16,8 @@ import {
 } from "@mindpay/crypto";
 import { createUlid, utcTimestampFromDate, utcTimestampSchema } from "@mindpay/domain";
 import {
-  generateAuthenticationOptions,
   type AuthenticationResponseJSON,
+  generateAuthenticationOptions,
   verifyAuthenticationResponse,
 } from "@simplewebauthn/server";
 import { type Context, Hono } from "hono";
