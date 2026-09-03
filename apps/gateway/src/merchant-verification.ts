@@ -88,11 +88,6 @@ export async function verifyMerchant(
   input: VerifyMerchantInput,
   dependencies: MerchantVerificationDependencies = {},
 ): Promise<MerchantVerificationRun> {
-  const now = dependencies.now?.() ?? new Date();
-  const nowEpochMs = now.getTime();
-  if (!Number.isSafeInteger(nowEpochMs) || nowEpochMs < 0) {
-    throw new RangeError("Merchant verification time must be safe epoch milliseconds");
-  }
   const fetchPublication = dependencies.fetchPublication ?? fetchJsonPublication;
   const resolveHostname = dependencies.resolveHostname ?? resolvePublicAddresses;
   const expectedAudience = input.expectedAudience ?? DEFAULT_MINDPAY_API_AUDIENCE;
@@ -119,6 +114,7 @@ export async function verifyMerchant(
   } catch {
     return failed(checks, "NETWORK_ERROR", "MANIFEST", { url: manifestUrl });
   }
+  const manifestVerificationTime = verificationEpochMs(dependencies.now);
   const manifestVerification = await verifyMerchantManifestPublication(
     {
       body: manifestResponse.body,
@@ -128,7 +124,7 @@ export async function verifyMerchant(
       responseUrl: manifestResponse.url,
       status: manifestResponse.status,
     },
-    nowEpochMs,
+    manifestVerificationTime,
   );
   if (!manifestVerification.valid) {
     return failed(checks, `MANIFEST_${manifestVerification.reason}`, "MANIFEST", {
@@ -168,6 +164,7 @@ export async function verifyMerchant(
       url: manifestVerification.manifest.catalog_url,
     });
   }
+  const catalogVerificationTime = verificationEpochMs(dependencies.now);
   const catalogVerification = await verifyMerchantCatalogPublication(
     {
       body: catalogResponse.body,
@@ -179,7 +176,7 @@ export async function verifyMerchant(
       responseUrl: catalogResponse.url,
       status: catalogResponse.status,
     },
-    nowEpochMs,
+    catalogVerificationTime,
   );
   if (!catalogVerification.valid) {
     return failed(checks, `CATALOG_${catalogVerification.reason}`, "CATALOG", {
@@ -209,6 +206,14 @@ export async function verifyMerchant(
     manifestPublication,
     valid: true,
   });
+}
+
+function verificationEpochMs(now: (() => Date) | undefined): number {
+  const value = (now?.() ?? new Date()).getTime();
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new RangeError("Merchant verification time must be safe epoch milliseconds");
+  }
+  return value;
 }
 
 export async function materialManifestFingerprint(manifest: MerchantManifest): Promise<string> {
@@ -244,12 +249,16 @@ export function catalogServiceFingerprint(service: MerchantCatalog["services"][n
   return JSON.stringify(service);
 }
 
-async function fetchJsonPublication(url: string): Promise<PublicationResponse> {
-  const response = await fetch(url, {
+export async function fetchJsonPublication(
+  url: string,
+  fetchPublication: (request: Request) => Promise<Response> = (request) => fetch(request),
+): Promise<PublicationResponse> {
+  const request = new Request(url, {
     headers: { accept: "application/json" },
     redirect: "manual",
     signal: AbortSignal.timeout(PUBLICATION_FETCH_TIMEOUT_MS),
   });
+  const response = await fetchPublication(request);
   let body: unknown = null;
   try {
     body = await readBoundedJson(response);
@@ -260,7 +269,7 @@ async function fetchJsonPublication(url: string): Promise<PublicationResponse> {
     body,
     location: response.headers.get("location"),
     status: response.status,
-    url: response.url,
+    url: response.url === "" ? url : response.url,
   };
 }
 
