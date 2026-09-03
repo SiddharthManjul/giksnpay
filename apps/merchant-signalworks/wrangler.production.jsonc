@@ -1,0 +1,51 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mindpay-signalworks",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-28",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "ENVIRONMENT": "production"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mindpay-signalworks",
+      "database_id": "aeacf754-2f5d-4ece-8df7-7a6656bc5c66",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PAYMENT_EVIDENCE",
+      "bucket_name": "mindpay-signalworks-payment-evidence"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "PAYMENT_EVENTS",
+        "queue": "mindpay-signalworks-payment-events"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "mindpay-signalworks-payment-events",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 5,
+        "dead_letter_queue": "mindpay-signalworks-payment-events-dlq"
+      }
+    ]
+  },
+  "services": [
+    {
+      "binding": "MINDPAY_GATEWAY",
+      "service": "mindpay-gateway"
+    }
+  ]
+}
