@@ -6,8 +6,8 @@
     "build": "next build --webpack",
     "build:cloudflare": "opennextjs-cloudflare build",
     "clean": "rm -rf .next .open-next coverage",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "dev": "next dev",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy --config wrangler.production.jsonc",
+    "dev": "next dev --port 3100",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
