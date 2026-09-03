@@ -253,10 +253,10 @@ describe("Gateway Better Auth lifecycle", () => {
   it("uses secure, host-only cookies for HTTPS deployments", async () => {
     const secureBindings: GatewayAuthBindings = {
       ...bindings,
-      BETTER_AUTH_URL: "https://api.mindpay.test",
+      BETTER_AUTH_URL: "https://api.mindpay.finance",
       ENVIRONMENT: "production",
-      PASSKEY_RP_ID: "mindpay.test",
-      TRUSTED_ORIGINS: "https://app.mindpay.test",
+      PASSKEY_RP_ID: "mindpay.finance",
+      TRUSTED_ORIGINS: "https://app.mindpay.finance",
     };
     await signUp("secure@mindpay.test", secureBindings);
     const response = await authRequest(
