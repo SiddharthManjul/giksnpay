@@ -1,0 +1,36 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mindpay-gateway",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-28",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "AGENT_MODEL_NAME": "gemini-3.8-flash",
+    "AGENT_MODEL_PROVIDER": "google",
+    "ENVIRONMENT": "production"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mindpay",
+      "database_id": "d8cca5e3-5034-4e39-be06-469e44ec8b93",
+      "migrations_dir": "../../packages/db/migrations"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "MARKETPLACE_CACHE",
+      "id": "b03cb0ab9a714505be07d26fa6d090db"
+    }
+  ],
+  "services": [
+    {
+      "binding": "SIGNALWORKS",
+      "service": "mindpay-signalworks"
+    }
+  ]
+}
