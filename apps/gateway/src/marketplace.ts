@@ -1,15 +1,15 @@
 import {
   type MarketplaceService,
+  marketplaceSearchQuerySchema,
   marketplaceServiceResponseSchema,
   marketplaceServiceSchema,
   marketplaceServicesResponseSchema,
-  marketplaceSearchQuerySchema,
   merchantIdSchema,
   merchantManifestSchema,
   merchantTrustResponseSchema,
 } from "@mindpay/contracts";
-import { z } from "zod";
 import { Hono } from "hono";
+import { z } from "zod";
 import { apiError, type GatewayEnvironment, resourceNotFound } from "./authorization";
 
 export const MARKETPLACE_CACHE_KEY = "marketplace:services:v1";
