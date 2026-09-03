@@ -11,7 +11,7 @@ const configPath = fileURLToPath(new URL("../wrangler.jsonc", import.meta.url));
 const wranglerCommand = process.platform === "win32" ? "wrangler.cmd" : "wrangler";
 const migration = spawnSync(
   wranglerCommand,
-  ["d1", "migrations", "apply", "mindpay-signalworks-local", "--local", "--config", configPath],
+  ["d1", "migrations", "apply", "mindpay-signalworks", "--local", "--config", configPath],
   { cwd: applicationRoot, encoding: "utf8", stdio: "inherit" },
 );
 
