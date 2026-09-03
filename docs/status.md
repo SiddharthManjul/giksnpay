@@ -630,5 +630,6 @@ Verification record: `docs/verification/phase-07.md`.
 
 - MP-0709 requires SignalWorks Razorpay Test Mode credentials plus a public/tunnel callback and
   webhook endpoint. Secrets must remain only in the SignalWorks Worker.
-- Live AI runs separately require the configured OpenAI secret; marketplace discovery, manual
-  commerce, and all deterministic Phase 5-7 verification remain available without it.
+- Live AI runs separately require `GOOGLE_GENERATIVE_AI_API_KEY`; the configured primary model is
+  Gemini 3.8 Flash (`gemini-3.8-flash`). Marketplace discovery, manual commerce, and all deterministic
+  Phase 5-7 verification remain available without it.
