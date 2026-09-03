@@ -19,11 +19,12 @@ instructions, user/assistant messages, bounded generation settings, and an optio
 Shared outputs contain text deltas or terminal finish/usage metadata. They do not expose raw response
 bodies, reasoning events, sources, provider metadata, or vendor error messages.
 
-The first adapter uses the AI SDK and OpenAI Responses models. Only the adapter imports those vendor
-packages. The provider and model are selected from strict environment configuration; the adapter
-passes the API key explicitly, disables provider-side response storage, omits reasoning summaries,
-and requests strict JSON-schema output. Configuration does not accept a base-URL override, so this
-ticket cannot create an arbitrary operator- or prompt-selected outbound destination.
+The primary adapter uses the AI SDK and Google Gemini, with an optional OpenAI adapter behind the
+same boundary. Only adapter modules import vendor packages. The provider and model are selected from
+strict environment configuration; the Gemini adapter passes the API key explicitly, suppresses
+thought output, and requests native structured output. The OpenAI adapter disables provider-side
+response storage and reasoning summaries. Configuration does not accept a base-URL override, so
+this ticket cannot create an arbitrary operator- or prompt-selected outbound destination.
 
 Structured output is parsed by the AI SDK and then validated again with the caller-owned Zod schema
 at the MindPay boundary. A schema/no-output failure receives exactly one new generation attempt. Only
@@ -42,9 +43,9 @@ metadata.
   AI SDK response types.
 - A malformed structured response costs at most one additional model generation before failing
   closed.
-- Schemas sent to OpenAI must remain compatible with its strict JSON-schema subset; MindPay's second
-  validation remains authoritative even when provider validation succeeds.
-- Live provider execution requires an OpenAI API key, while deterministic tests use an injected SDK
-  boundary and make no external model calls.
+- Schemas sent to a provider must remain compatible with its structured-output subset; MindPay's
+  second validation remains authoritative even when provider validation succeeds.
+- Live default provider execution requires a Google Gemini API key, while deterministic tests use an
+  injected SDK boundary and make no external model calls.
 - Manual commerce fallback remains a separate Phase 5 ticket and will consume the stable
   provider-unavailable error.
