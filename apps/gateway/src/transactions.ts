@@ -3,9 +3,9 @@ import {
   authenticatorTransportSchema,
   type MerchantPaymentAuthorization,
   type MerchantPaymentOrderResponse,
+  mandateIdSchema,
   merchantCheckoutSchema,
   merchantPaymentOrderResponseSchema,
-  mandateIdSchema,
   offerIdSchema,
   paymentRailSchema,
   sha256HexSchema,
@@ -29,8 +29,8 @@ import {
 } from "@mindpay/protocol-mandates";
 import { evaluateRisk, type RiskEvaluationInput } from "@mindpay/risk-engine";
 import {
-  generateAuthenticationOptions,
   type AuthenticationResponseJSON,
+  generateAuthenticationOptions,
   verifyAuthenticationResponse,
 } from "@simplewebauthn/server";
 import { type Context, Hono } from "hono";
