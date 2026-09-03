@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { resolveMerchantVerificationDependencies } from "./merchant-admin";
 import { isPublicIpAddress, verifyMerchant } from "./merchant-verification";
 
 describe("merchant network verification boundary", () => {
@@ -77,5 +78,48 @@ describe("merchant network verification boundary", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  it("uses the SignalWorks service binding only for the exact development reference merchant", async () => {
+    const requestedUrls: string[] = [];
+    const signalWorks = {
+      fetch: async (request: Request) => {
+        requestedUrls.push(request.url);
+        return new Response('{"publication":"local"}', {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        });
+      },
+    } as unknown as Fetcher;
+    const local = resolveMerchantVerificationDependencies({
+      configured: {},
+      environment: "development",
+      merchant: { domain: "merchant-demo.example.com", id: "merchant_signalworks" },
+      signalWorks,
+    });
+
+    await expect(local.resolveHostname?.("merchant-demo.example.com")).resolves.toEqual([
+      "8.8.8.8",
+    ]);
+    await expect(
+      local.fetchPublication?.("https://merchant-demo.example.com/catalog/feed.json"),
+    ).resolves.toMatchObject({
+      body: { publication: "local" },
+      status: 200,
+      url: "https://merchant-demo.example.com/catalog/feed.json",
+    });
+    expect(requestedUrls).toEqual(["https://merchant-demo.example.com/catalog/feed.json"]);
+    await expect(
+      local.fetchPublication?.("https://merchant-demo.example.com/unreviewed.json"),
+    ).rejects.toThrow("not allowed");
+
+    const production = resolveMerchantVerificationDependencies({
+      configured: {},
+      environment: "production",
+      merchant: { domain: "merchant-demo.example.com", id: "merchant_signalworks" },
+      signalWorks,
+    });
+    expect(production.fetchPublication).toBeUndefined();
+    expect(production.resolveHostname).toBeUndefined();
   });
 });
