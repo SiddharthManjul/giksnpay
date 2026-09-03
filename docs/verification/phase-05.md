@@ -35,9 +35,10 @@
 5. real Better Auth, Hono, Miniflare, D1, marketplace, AI-run, SSE resume, organization isolation,
    provider-outage, and manual-fallback integration tests.
 
-The live OpenAI adapter compiles against the pinned SDK but is replaced by deterministic providers
-in tests, so the exit suite makes no external network call and needs no API key. A live AI run
-requires `OPENAI_API_KEY`; an absent or unavailable provider leaves the manual path usable.
+The live Google Gemini and optional OpenAI adapters compile against pinned SDKs but are replaced by
+deterministic providers in most tests, so the exit suite makes no external network call and needs no
+API key. A live default AI run requires `GOOGLE_GENERATIVE_AI_API_KEY`; an absent or unavailable
+provider leaves the manual path usable.
 
 ## Verified commands
 
