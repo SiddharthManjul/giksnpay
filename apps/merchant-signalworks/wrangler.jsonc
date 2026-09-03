@@ -4,6 +4,7 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-08-28",
   "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
   "observability": {
     "enabled": true
   },
@@ -13,8 +14,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "mindpay-signalworks-local",
-      "database_id": "00000000-0000-0000-0000-000000000002",
+      "database_name": "mindpay-signalworks",
+      "database_id": "aeacf754-2f5d-4ece-8df7-7a6656bc5c66",
       "migrations_dir": "migrations"
     }
   ],
