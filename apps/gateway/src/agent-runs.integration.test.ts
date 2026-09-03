@@ -16,6 +16,7 @@ import { createUlid } from "@mindpay/domain";
 import type { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { z } from "zod";
+import { AGENT_MODEL_USER_TOKEN_BUDGET_PER_MINUTE } from "./agent-model-capacity";
 import type { GatewayAuthBindings } from "./auth";
 import { ORGANIZATION_CONTEXT_HEADER } from "./authorization";
 import { IDEMPOTENCY_KEY_HEADER } from "./demo-workspaces";
@@ -37,12 +38,20 @@ interface TestUser {
 }
 
 class SuccessfulModelProvider implements ModelProvider {
+  generateCalls = 0;
+  structuredAbortSignal: AbortSignal | undefined;
+  structuredMaxOutputTokens: number | undefined;
   readonly structuredSystems: string[] = [];
+  streamAbortSignal: AbortSignal | undefined;
+  streamMaxOutputTokens: number | undefined;
   streamCalls = 0;
 
   async generateStructured<TSchema extends z.ZodType>(
     input: StructuredGenerationInput<TSchema>,
   ): Promise<StructuredGenerationResult<TSchema>> {
+    this.generateCalls += 1;
+    this.structuredAbortSignal = input.abortSignal;
+    this.structuredMaxOutputTokens = input.maxOutputTokens;
     this.structuredSystems.push(input.system);
     return {
       attempts: 1,
@@ -60,7 +69,9 @@ class SuccessfulModelProvider implements ModelProvider {
     };
   }
 
-  async streamAgentRun(_input: AgentRunInput): Promise<AgentRunStream> {
+  async streamAgentRun(input: AgentRunInput): Promise<AgentRunStream> {
+    this.streamAbortSignal = input.abortSignal;
+    this.streamMaxOutputTokens = input.maxOutputTokens;
     this.streamCalls += 1;
     return {
       model: "test-model",
@@ -280,7 +291,14 @@ describe("Gateway persisted procurement agent runs", () => {
     expect(JSON.stringify(run)).not.toContain("chainOfThought");
     expect(JSON.stringify(run)).not.toContain("reasoningTokens");
     expect(successfulProvider.streamCalls).toBe(1);
+    expect(successfulProvider.structuredAbortSignal).toBeInstanceOf(AbortSignal);
+    expect(successfulProvider.streamAbortSignal).toBe(successfulProvider.structuredAbortSignal);
+    expect(successfulProvider.structuredMaxOutputTokens).toBe(1_024);
+    expect(successfulProvider.streamMaxOutputTokens).toBe(1_024);
     expect(successfulProvider.structuredSystems[0]).not.toContain("chain-of-thought");
+    expect(successfulProvider.structuredSystems[0]).toContain(
+      "stable lowercase snake_case identifier",
+    );
 
     const replay = await apiRequest(app, owner, `/api/v1/agents/${agentId}/runs`, {
       body: JSON.stringify({ intent }),
@@ -443,6 +461,40 @@ describe("Gateway persisted procurement agent runs", () => {
     });
     expect(evidenceRead.status).toBe(200);
     expect(agentRunResponseSchema.parse(await evidenceRead.json()).run.toolCalls).toHaveLength(3);
+  });
+
+  it("rejects exhausted AI budgets before provider execution and permits a clean retry", async () => {
+    const windowStartedAt = Math.floor(FIXED_NOW.getTime() / 60_000) * 60_000;
+    const scopeHash = await sha256CanonicalJsonHex({ userId: owner.id });
+    await database
+      .prepare("UPDATE agent_model_usage_windows SET used_tokens = ? WHERE key = ?")
+      .bind(
+        AGENT_MODEL_USER_TOKEN_BUDGET_PER_MINUTE,
+        `mindpay:model:budget:user:${scopeHash}:${windowStartedAt}`,
+      )
+      .run();
+    const callsBeforeDenial = successfulProvider.generateCalls;
+    const idempotencyKey = "agent-run-rate-limit-0007";
+    const denied = await apiRequest(app, owner, `/api/v1/agents/${agentId}/runs`, {
+      body: JSON.stringify({ intent: "Buy the best competitor research under ₹400" }),
+      headers: { [IDEMPOTENCY_KEY_HEADER]: idempotencyKey },
+      method: "POST",
+    });
+    expect(denied.status).toBe(429);
+    expect(denied.headers.get("retry-after")).toBe("60");
+    await expect(denied.json()).resolves.toMatchObject({
+      error: { code: "AGENT_RUN_RATE_LIMITED" },
+    });
+    expect(successfulProvider.generateCalls).toBe(callsBeforeDenial);
+
+    await database.prepare("DELETE FROM agent_model_usage_windows").run();
+    const retried = await apiRequest(app, owner, `/api/v1/agents/${agentId}/runs`, {
+      body: JSON.stringify({ intent: "Buy the best competitor research under ₹400" }),
+      headers: { [IDEMPOTENCY_KEY_HEADER]: idempotencyKey },
+      method: "POST",
+    });
+    expect(retried.status).toBe(201);
+    expect(successfulProvider.generateCalls).toBe(callsBeforeDenial + 1);
   });
 
   async function createAuthenticatedUser(
