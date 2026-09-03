@@ -1,16 +1,16 @@
 import {
   marketplaceServicesResponseSchema,
   merchantAdministrationResponseSchema,
-  merchantTrustResponseSchema,
   merchantCatalogSchema,
   merchantManifestSchema,
+  merchantTrustResponseSchema,
   provisionDemoWorkspaceResponseSchema,
-  signedMerchantCatalogSchema,
-  signedMerchantManifestSchema,
-  signalWorksCatalogFixture,
-  signalWorksManifestFixture,
   type SignedMerchantCatalog,
   type SignedMerchantManifest,
+  signalWorksCatalogFixture,
+  signalWorksManifestFixture,
+  signedMerchantCatalogSchema,
+  signedMerchantManifestSchema,
 } from "@mindpay/contracts";
 import {
   exportEs256PublicJwk,
