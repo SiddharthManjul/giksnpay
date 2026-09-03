@@ -9,8 +9,8 @@ import {
 } from "@mindpay/contracts";
 import { sha256CanonicalJsonHex } from "@mindpay/crypto";
 import { createUlid, idempotencyKeySchema } from "@mindpay/domain";
-import { z } from "zod";
 import { type Context, Hono } from "hono";
+import { z } from "zod";
 import {
   apiError,
   type GatewayEnvironment,
@@ -24,16 +24,23 @@ import {
   catalogServiceFingerprint,
   compareSemanticVersions,
   DEFAULT_MINDPAY_API_AUDIENCE,
-  materialManifestFingerprint,
+  fetchJsonPublication,
   MERCHANT_VERIFICATION_TTL_MS,
   type MerchantVerificationCheck,
   type MerchantVerificationDependencies,
+  materialManifestFingerprint,
   verifyMerchant,
 } from "./merchant-verification";
 import { merchantVerificationTransitionPath } from "./merchant-verification-state";
 
 const EMPTY_BODY_SCHEMA = z.object({}).strict();
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1_000;
+const LOCAL_REFERENCE_MERCHANT_DOMAIN = "merchant-demo.example.com";
+const LOCAL_REFERENCE_MERCHANT_ID = "merchant_signalworks";
+const LOCAL_REFERENCE_PUBLICATION_PATHS = new Set([
+  "/.well-known/mindpay.json",
+  "/catalog/feed.json",
+]);
 
 type AdminAction = "REVERIFY" | "SUBMIT" | "SUSPEND" | "VERIFY";
 type VerificationStatus =
@@ -212,7 +219,12 @@ async function verificationMutation(
         expectedAudience: context.env.MINDPAY_API_AUDIENCE ?? DEFAULT_MINDPAY_API_AUDIENCE,
         merchantId: merchant.id,
       },
-      dependencies,
+      resolveMerchantVerificationDependencies({
+        configured: dependencies,
+        environment: context.env.ENVIRONMENT,
+        merchant,
+        signalWorks: context.env.SIGNALWORKS,
+      }),
     );
   } catch {
     return failAdminMutation(
@@ -410,6 +422,46 @@ async function verificationMutation(
     merchant,
     now,
     run,
+  });
+}
+
+export function resolveMerchantVerificationDependencies(input: {
+  readonly configured: MerchantVerificationDependencies;
+  readonly environment: string;
+  readonly merchant: Pick<MerchantRow, "domain" | "id">;
+  readonly signalWorks: Fetcher | undefined;
+}): MerchantVerificationDependencies {
+  if (
+    input.environment !== "development" ||
+    input.merchant.id !== LOCAL_REFERENCE_MERCHANT_ID ||
+    input.merchant.domain !== LOCAL_REFERENCE_MERCHANT_DOMAIN ||
+    input.signalWorks === undefined
+  ) {
+    return input.configured;
+  }
+
+  const signalWorks = input.signalWorks;
+  return Object.freeze({
+    ...input.configured,
+    fetchPublication:
+      input.configured.fetchPublication ??
+      (async (url) => {
+        const publicationUrl = new URL(url);
+        if (
+          publicationUrl.protocol !== "https:" ||
+          publicationUrl.hostname !== LOCAL_REFERENCE_MERCHANT_DOMAIN ||
+          publicationUrl.port !== "" ||
+          publicationUrl.search !== "" ||
+          publicationUrl.hash !== "" ||
+          !LOCAL_REFERENCE_PUBLICATION_PATHS.has(publicationUrl.pathname)
+        ) {
+          throw new Error("The local reference publication URL is not allowed");
+        }
+        return fetchJsonPublication(url, (request) => signalWorks.fetch(request));
+      }),
+    resolveHostname:
+      input.configured.resolveHostname ??
+      (async (hostname) => (hostname === LOCAL_REFERENCE_MERCHANT_DOMAIN ? ["8.8.8.8"] : [])),
   });
 }
 
