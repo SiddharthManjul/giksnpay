@@ -1,20 +1,20 @@
 import { parseWorkerEnvironment } from "@mindpay/config";
 import { healthResponseSchema } from "@mindpay/contracts";
 import { Hono } from "hono";
-import { type GatewayAuthBindings, handleGatewayAuth } from "./auth";
+import { type AgentRunRouteDependencies, createAgentRunRoutes } from "./agent-runs";
 import { createAgentRoutes } from "./agents";
-import { createAgentRunRoutes, type AgentRunRouteDependencies } from "./agent-runs";
+import { type GatewayAuthBindings, handleGatewayAuth } from "./auth";
 import type { GatewayEnvironment } from "./authorization";
 import { browserSecurityBoundary } from "./browser-security";
 import { demoWorkspaceRoutes } from "./demo-workspaces";
-import { createMerchantAdminRoutes } from "./merchant-admin";
-import type { MerchantVerificationDependencies } from "./merchant-verification";
+import { createMandateRoutes, type MandateRouteDependencies } from "./mandates";
 import { createMarketplaceRoutes } from "./marketplace";
+import { createMerchantAdminRoutes } from "./merchant-admin";
 import {
   createMerchantPaymentEventRoutes,
   type MerchantPaymentEventDependencies,
 } from "./merchant-payment-events";
-import { createMandateRoutes, type MandateRouteDependencies } from "./mandates";
+import type { MerchantVerificationDependencies } from "./merchant-verification";
 import { organizationRoutes } from "./organizations";
 import { passkeyRoutes } from "./passkeys";
 import { createTransactionRoutes, type TransactionRouteDependencies } from "./transactions";
