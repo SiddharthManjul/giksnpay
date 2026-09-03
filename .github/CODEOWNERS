@@ -1,0 +1,27 @@
+# Security-sensitive automation and dependency state
+/.github/workflows/ @SiddharthManjul
+/pnpm-lock.yaml @SiddharthManjul
+/pnpm-workspace.yaml @SiddharthManjul
+
+# Deployment boundaries
+/**/wrangler*.jsonc @SiddharthManjul
+/apps/gateway/scripts/deploy-production.mjs @SiddharthManjul
+
+# Identity, authorization, AI capacity, and payment authority
+/apps/gateway/src/auth* @SiddharthManjul
+/apps/gateway/src/authorization.ts @SiddharthManjul
+/apps/gateway/src/browser-security* @SiddharthManjul
+/apps/gateway/src/passkeys* @SiddharthManjul
+/apps/gateway/src/agent-model-capacity* @SiddharthManjul
+/apps/gateway/src/agent-runs* @SiddharthManjul
+/apps/gateway/src/merchant-payment-events.ts @SiddharthManjul
+/apps/gateway/src/mandates.ts @SiddharthManjul
+/apps/gateway/src/transactions.ts @SiddharthManjul
+/apps/merchant-signalworks/src/payments* @SiddharthManjul
+
+# Shared validation, persistence, and cryptography
+/packages/config/ @SiddharthManjul
+/packages/contracts/ @SiddharthManjul
+/packages/crypto/ @SiddharthManjul
+/packages/db/migrations/ @SiddharthManjul
+/packages/razorpay/ @SiddharthManjul
