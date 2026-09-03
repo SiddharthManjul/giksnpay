@@ -15,12 +15,13 @@ pnpm --filter @mindpay/db migrations:apply
 Copy `apps/gateway/.dev.vars.example` to an ignored `apps/gateway/.dev.vars` file and replace the
 secret placeholders. The authentication secret must contain at least 32 characters. The agent-key
 secret must be exactly 32 random bytes encoded as unpadded base64url; it is an independent wrapping
-key. The OpenAI key is required only for live AI runs:
+key. The Google Gemini key is required only for live AI runs. MindPay's default model is the stable
+Gemini 3.8 Flash endpoint (`gemini-3.8-flash`):
 
 ```dotenv
 BETTER_AUTH_SECRET=<generate-a-unique-high-entropy-value>
 AGENT_KEY_ENCRYPTION_KEY=<generate-32-random-bytes-as-unpadded-base64url>
-OPENAI_API_KEY=<create-an-openai-api-key-for-live-agent-runs>
+GOOGLE_GENERATIVE_AI_API_KEY=<paste-the-key-created-in-google-ai-studio>
 ```
 
 Then run the Gateway:
@@ -30,15 +31,33 @@ pnpm --filter @mindpay/gateway dev
 ```
 
 `BETTER_AUTH_URL`, `TRUSTED_ORIGINS`, and `PASSKEY_RP_ID` are non-secret local defaults in
-`wrangler.jsonc`. The RP ID must equal or be a parent domain of every trusted browser origin.
-Preview and production deployments must replace the origins with HTTPS values. Never add secrets to
-tracked Wrangler variables or application source; provision them as Worker secrets instead:
+`wrangler.jsonc`. The local configuration has `workers_dev` disabled so it cannot be accidentally
+published. Never add secrets to tracked Wrangler variables or application source; provision them as
+Worker secrets instead:
 
 ```sh
 pnpm --filter @mindpay/gateway exec wrangler secret put BETTER_AUTH_SECRET
 pnpm --filter @mindpay/gateway exec wrangler secret put AGENT_KEY_ENCRYPTION_KEY
-pnpm --filter @mindpay/gateway exec wrangler secret put OPENAI_API_KEY
+pnpm --filter @mindpay/gateway exec wrangler secret put GOOGLE_GENERATIVE_AI_API_KEY
 ```
+
+Production uses the separate `wrangler.production.jsonc` and a fail-closed deployment preflight.
+Supply the final public origins and their shared passkey DNS suffix before deployment:
+
+```sh
+export MINDPAY_GATEWAY_ORIGIN=https://mindpay-gateway.your-account.workers.dev
+export MINDPAY_WEB_ORIGIN=https://mindpay-web.your-account.workers.dev
+export MINDPAY_PASSKEY_RP_ID=your-account.workers.dev
+pnpm --filter @mindpay/gateway deploy
+```
+
+The deploy command refuses HTTP, localhost, reserved test domains, URL credentials or paths, and
+origins outside the passkey RP ID. Production runtime validation repeats those checks and always
+forces Secure session cookies.
+
+The Google Gemini API origin is fixed by the provider SDK and cannot be overridden through runtime
+configuration. To try another Gemini model later, keep the same
+`GOOGLE_GENERATIVE_AI_API_KEY` and replace only `AGENT_MODEL_NAME` with an exact supported model ID.
 
 ## Session boundary
 
@@ -172,6 +191,14 @@ proposal. Merchant and model prose are untrusted and cannot select a payee, amou
 transition. Tool inputs and outputs, canonical hashes, latency, explicit terminal status, summaries,
 and the event sequence are persisted; hidden model reasoning is not part of the runtime or evidence
 contracts.
+
+AI execution has a server-owned 45-second deadline shared by parsing and explanation, a hard 2,048
+token output ceiling, one concurrent model run per organization, and atomic per-user and
+per-organization minute budgets in D1. A user also cannot bypass concurrency by switching
+organizations. Capacity exhaustion returns `429` with `Retry-After: 60`
+before invoking the provider. Capacity leases expire automatically and are also released when a run
+finishes or fails. Model capacity uses dedicated D1 tables rather than Better Auth's rate-limit
+storage, so authentication cleanup cannot weaken an active AI limit.
 
 The event endpoint is one-shot reconnectable SSE. Resume with `Last-Event-ID` or the equivalent
 `after` query value, process the remaining events, then honor the final `refetch` event by reading
