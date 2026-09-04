@@ -1,11 +1,11 @@
 # MindPay implementation status
 
-Last updated: 2026-09-03
+Last updated: 2026-09-04
 
 ## Current phase
 
-Phases 0 through 6 are complete. Phase 7 implementation and deterministic verification are
-complete; MP-0709 still requires recorded live Razorpay Test Mode success and failure/retry evidence.
+Phases 0 through 7 are complete. Real Razorpay Test Mode success and failure evidence is recorded,
+including captured/paid reconciliation, failure release, one bounded retry, and retry exhaustion.
 The next implementation ticket is MP-0801, entitlement, redemption, MCP, and delivery-receipt
 contracts.
 
@@ -20,7 +20,7 @@ contracts.
 | 4. Marketplace and verification | Complete | Only verified services are discoverable |
 | 5. Agents and runtime | Complete | Typed approved tools and manual fallback work |
 | 6. Mandates, policy, and risk | Complete | ₹299 allows, ₹449 reviews, and ₹799 blocks |
-| 7. Razorpay Test Mode | Implementation complete; live exit evidence pending | Success, failure, deduplication, and reconciliation pass |
+| 7. Razorpay Test Mode | Complete | Success, failure, deduplication, and reconciliation pass |
 | 8. Entitlements and MCP | Not started | A paid entitlement redeems exactly once |
 | 9. Audit and evidence | Not started | Public verification detects any mutation |
 | 10. Frontend completion | Not started | Critical flows work accessibly on supported viewports |
@@ -621,17 +621,22 @@ Verification record: `docs/verification/phase-06.md`.
 
 Verification record: `docs/verification/phase-07.md`.
 
-### MP-0709 blocked on external credentials
+### MP-0709 complete
 
-- Deterministic and provider-faithful Test Mode fixtures pass, but this environment has no Razorpay
-  key ID, key secret, or webhook secret and no public callback/webhook endpoint.
-- One real Test Mode success and one real failure/retry must be recorded before Phase 7's external
-  exit gate can be marked complete.
+- Recorded a clean one-attempt Standard Checkout success: order `order_TXvVIrl8FI4az1` is `paid`
+  and payment `pay_TXvsasJEUjKRl1` is `captured`; the callback signature verified.
+- Recorded a one-attempt Standard Checkout failure: order `order_TXvFObUOrM2Kyq` is `attempted`
+  and payment `pay_TXvnMJbpdn6sbl` is `failed` with reason `payment_failed`.
+- MindPay's typed client and production reconciler classified the exact provider objects as
+  `CAPTURED_PAID`/eligible and `FAILED`/ineligible. The exact IDs passed the complete Gateway
+  integration fixture, proving commit, reservation release, one allowed retry, and exhaustion.
+- Added a secret-safe live verification command and retained no key secret, webhook secret, card
+  data, CVV, or full callback signature.
 
 ## Blockers
 
-- MP-0709 requires SignalWorks Razorpay Test Mode credentials plus a public/tunnel callback and
-  webhook endpoint. Secrets must remain only in the SignalWorks Worker.
+- Public SignalWorks deployment, stable HTTPS origins, and provider-to-Worker webhook delivery
+  remain tracked by MP-1203; secrets must remain only in the SignalWorks Worker.
 - Live AI runs separately require `GOOGLE_GENERATIVE_AI_API_KEY`; the configured primary model is
   Gemini 3.8 Flash (`gemini-3.8-flash`). Marketplace discovery, manual commerce, and all deterministic
   Phase 5-7 verification remain available without it.
