@@ -147,7 +147,7 @@ Support refund-pending and refunded evidence without making it part of the manda
 ### MP-0709: Validate real Razorpay Test Mode success and failure
 
 - Priority: Critical
-- Status: Blocked — Razorpay Test Mode credentials and a public webhook/callback endpoint are absent
+- Status: Done
 - Depends on: MP-0707
 - Size: 1-3 engineering days
 
@@ -157,12 +157,12 @@ Run credentialed public or local-tunnel integration tests against Razorpay Test 
 
 **Acceptance criteria**
 
-- [ ] One real Test Mode success reaches reconciled captured/paid state.
-- [ ] One real Test Mode failure releases budget and offers only the allowed retry.
-- [ ] Affected checks pass and `docs/status.md` is updated.
+- [x] One real Test Mode success reaches reconciled captured/paid state.
+- [x] One real Test Mode failure releases budget and offers only the allowed retry.
+- [x] Affected checks pass and `docs/status.md` is updated.
 
 ## Phase completion
 
-- [ ] Every ticket above is Done.
-- [ ] The exit gate is demonstrated in CI or a reproducible verification record.
+- [x] Every ticket above is Done.
+- [x] The exit gate is demonstrated in CI or a reproducible verification record.
 - [x] Architecture changes are recorded in `docs/adr/`.
