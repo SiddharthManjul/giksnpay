@@ -1,8 +1,34 @@
 # Phase 7 verification
 
-- Date: 2026-08-31
+- Date: 2026-09-04
 - Deterministic result: Pass
-- Real Razorpay Test Mode result: Pending credentials and public webhook/callback run
+- Real Razorpay Test Mode result: Pass
+
+## Live Razorpay Test Mode evidence
+
+The final evidence run used Razorpay Standard Checkout in a headed local browser with the
+[official Test Mode cards](https://razorpay.com/docs/payments/payments/test-card-details/). The
+account exposed Card, Netbanking, and Wallet methods but not UPI, so the published success card and
+the published `card_declined` card were used. The browser held only the public `rzp_test_*` key;
+credentials remained in the ignored SignalWorks `.dev.vars` file. No key secret, webhook secret,
+card data, CVV, or full callback signature was retained in this record.
+
+| Scenario | Provider order | Provider payment | Final provider state | Amount | Attempts | Provider timestamps (UTC) |
+|---|---|---|---|---:|---:|---|
+| Success | `order_TXvVIrl8FI4az1` | `pay_TXvsasJEUjKRl1` | `paid` / `captured`; callback signature valid | ₹299.00 | 1 | Order `2026-09-04T10:27:23Z`; payment `2026-09-04T10:49:27Z` |
+| Failure | `order_TXvFObUOrM2Kyq` | `pay_TXvnMJbpdn6sbl` | `attempted` / `failed`; `payment_failed` | ₹449.00 | 1 | Order `2026-09-04T10:12:19Z`; payment `2026-09-04T10:44:29Z` |
+
+MindPay's production `RazorpayClient` fetched and Zod-validated those exact objects. The production
+reconciler returned `CAPTURED_PAID` with `fulfilment_eligible=true` for the success and `FAILED`
+with reason `PAYMENT_FAILED` and `fulfilment_eligible=false` for the failure. The exact four
+provider IDs were then substituted into the complete Gateway integration fixture for one evidence
+run: the captured event committed spend once, the failed event released the active reservation,
+one retry reserved budget and created a distinct second order, and the next retry returned
+`PAYMENT_ATTEMPTS_EXHAUSTED`. The fixture source was restored immediately after the passing run.
+
+Public provider-to-Worker webhook delivery remains a deployment concern tracked by MP-1203. Phase
+7 verifies the same raw-body HMAC, private evidence, queue, deduplication, reconciliation, signed
+merchant-event, and Gateway state path locally; the public endpoint is not claimed as deployed.
 
 ## Exit-gate evidence
 
@@ -41,26 +67,23 @@
 contracts, environment flags, reproducible D1 migrations, SignalWorks D1/R2/queue integration, and
 the authenticated Gateway reservation/payment/retry integration.
 
+The real provider objects can be rechecked without printing credentials:
+
+```bash
+pnpm exec tsx scripts/verify-phase-07-live.ts \
+  order_TXvVIrl8FI4az1 pay_TXvsasJEUjKRl1 \
+  order_TXvFObUOrM2Kyq pay_TXvnMJbpdn6sbl
+```
+
 ## Verified commands
 
 | Command | Result | Proves |
 |---|---|---|
+| `pnpm exec tsx scripts/verify-phase-07-live.ts …` | Pass | Exact Test Mode objects validate and reconcile to `CAPTURED_PAID` and `FAILED` |
 | `pnpm verify:phase-07` | Pass | Deterministic provider, signature, evidence, queue, state, budget, and retry boundaries |
 | `pnpm check` | Pass | Formatting, lint, strict typecheck, and all tests across 18 workspaces |
 | `pnpm build` | Pass | All 18 production Worker, package, and web builds |
 | `git diff --check` | Pass | No malformed patch whitespace |
-
-## External Test Mode validation still required
-
-The current environment has no `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, or
-`RAZORPAY_WEBHOOK_SECRET`. MP-0709 therefore cannot be truthfully marked Done here. To close it:
-
-1. configure the three secrets only in the SignalWorks Worker and configure a public/tunnel webhook
-   to `/webhooks/razorpay`;
-2. run one Standard Checkout payment with Razorpay's Test Mode success instrument and retain the
-   provider order/payment/event IDs;
-3. run one Test Mode failure, verify `PAYMENT_FAILED`, released budget, and one allowed retry; and
-4. append the redacted IDs and timestamps to this record, then mark MP-0709 and Phase 7 Done.
 
 ## Architecture record
 
@@ -70,5 +93,5 @@ eligibility, and retry/refund boundaries.
 
 ## Result
 
-MP-0701 through MP-0708 are implemented and reproducibly verified. MP-0709 is blocked only on the
-external Razorpay Test Mode credentialed run; no local implementation work remains for that ticket.
+MP-0701 through MP-0709 are implemented and reproducibly verified. Phase 7 is complete. Public
+webhook delivery and deployment-domain alignment remain explicitly tracked in Phase 12.
