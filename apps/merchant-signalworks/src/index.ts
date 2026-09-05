@@ -10,6 +10,7 @@ import {
 } from "./checkout";
 import { createSignalWorksCatalogPublication } from "./catalog";
 import { createSignalWorksManifestPublication } from "./manifest";
+import { createSignalWorksMcpRoutes } from "./mcp";
 import {
   createSignalWorksPaymentRoutes,
   processSignalWorksRazorpayEvent,
@@ -19,6 +20,7 @@ import {
 
 export interface MerchantBindings extends SignalWorksCheckoutBindings {
   MINDPAY_GATEWAY?: SignalWorksPaymentBindings["MINDPAY_GATEWAY"];
+  MINDPAY_API_AUDIENCE?: string;
   PAYMENT_EVENTS?: SignalWorksPaymentBindings["PAYMENT_EVENTS"];
   PAYMENT_EVIDENCE?: SignalWorksPaymentBindings["PAYMENT_EVIDENCE"];
   RAZORPAY_KEY_ID?: string;
@@ -119,6 +121,7 @@ export function createMerchantApp(
     "/",
     createSignalWorksPaymentRoutes(dependencies) as unknown as Hono<{ Bindings: MerchantBindings }>,
   );
+  app.route("/", createSignalWorksMcpRoutes());
 
   return app;
 }
