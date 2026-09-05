@@ -13,6 +13,8 @@ export interface GatewayAuthBindings {
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   DB: D1Database;
+  EVIDENCE?: R2Bucket;
+  EVIDENCE_QUEUE?: Queue<{ readonly transactionId: string }>;
   ENVIRONMENT: string;
   GOOGLE_GENERATIVE_AI_API_KEY?: string;
   MARKETPLACE_CACHE?: KVNamespace;
@@ -21,6 +23,7 @@ export interface GatewayAuthBindings {
   PASSKEY_RP_ID: string;
   SIGNALWORKS?: Fetcher;
   SIGNALWORKS_MACHINE_AUTH_TOKEN?: string;
+  TRANSACTION_EVENTS?: DurableObjectNamespace;
   TRUSTED_ORIGINS: string;
 }
 
