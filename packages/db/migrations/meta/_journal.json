@@ -92,6 +92,20 @@
       "when": 1788340150025,
       "tag": "0012_agent_model_capacity",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1788521171769,
+      "tag": "0013_phase-08-entitlements-mcp",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1788572396693,
+      "tag": "0014_phase-09-audit-evidence",
+      "breakpoints": true
     }
   ]
 }
