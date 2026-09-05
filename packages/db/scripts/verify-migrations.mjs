@@ -27,10 +27,16 @@ const expectedTables = [
   "audit_events",
   "consumed_nonces",
   "demo_workspaces",
+  "entitlement_deliveries",
+  "entitlements",
+  "evidence_bundles",
+  "fulfilment_results",
   "idempotency_records",
   "mandate_proofs",
   "mandates",
   "marketplace_cache_versions",
+  "mcp_rate_limits",
+  "mcp_tool_invocations",
   "merchant_admin_events",
   "merchant_catalogs",
   "merchant_keys",
@@ -42,6 +48,7 @@ const expectedTables = [
   "passkey_credentials",
   "passkey_registration_challenges",
   "payment_attempts",
+  "platform_signing_keys",
   "provider_events",
   "rate_limit",
   "replay_nonces",
@@ -81,12 +88,26 @@ const expectedTriggers = [
   "consumed_nonces_no_update",
   "consumed_nonces_require_tenant_binding",
   "consumed_nonces_retention_guard",
+  "entitlement_deliveries_no_update",
+  "entitlements_identity_immutable",
+  "entitlements_no_delete",
+  "entitlements_require_transaction_binding",
+  "entitlements_transition_guard",
+  "evidence_bundles_no_delete",
+  "evidence_bundles_no_update",
+  "evidence_bundles_require_terminal_transaction",
+  "fulfilment_results_no_delete",
+  "fulfilment_results_no_update",
+  "fulfilment_results_require_binding",
   "mandate_proofs_no_update",
   "mandate_proofs_require_tenant_binding",
   "mandate_proofs_retention_guard",
   "mandates_identity_immutable",
   "mandates_require_tenant_binding",
   "mandates_retention_guard",
+  "mcp_tool_invocations_no_delete",
+  "mcp_tool_invocations_no_update",
+  "mcp_tool_invocations_require_binding",
   "merchant_admin_events_no_delete",
   "merchant_admin_events_no_update",
   "merchant_admin_events_require_current_mutation",
@@ -101,6 +122,7 @@ const expectedTriggers = [
   "payment_attempts_identity_immutable",
   "payment_attempts_require_tenant_binding",
   "payment_attempts_retention_guard",
+  "platform_signing_keys_identity_immutable",
   "provider_events_identity_immutable",
   "provider_events_require_tenant_binding",
   "provider_events_retention_guard",
@@ -151,7 +173,7 @@ try {
   assertEqual(triggerNames, expectedTriggers, "Database integrity triggers are missing");
 
   const migrationCount = query(firstDatabase, "SELECT count(*) AS count FROM d1_migrations");
-  assert(migrationCount[0]?.count === 13, "Every migration must be recorded exactly once");
+  assert(migrationCount[0]?.count === 15, "Every migration must be recorded exactly once");
 
   seedIntegrityRecords(firstDatabase);
   verifyUniqueness(firstDatabase);
