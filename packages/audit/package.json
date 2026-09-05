@@ -12,6 +12,10 @@
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@mindpay/contracts": "workspace:*",
+    "@mindpay/crypto": "workspace:*",
+    "@mindpay/domain": "workspace:*"
+  },
   "devDependencies": {}
 }
