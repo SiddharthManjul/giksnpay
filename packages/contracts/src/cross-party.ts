@@ -277,7 +277,7 @@ export const merchantPaymentProofSchema = z
     provider: z.literal("RAZORPAY"),
     provider_event_id: externalReferenceSchema,
     provider_order_id: externalReferenceSchema,
-    provider_payment_id: externalReferenceSchema,
+    provider_payment_id: externalReferenceSchema.nullable(),
     verification_source: z.enum(["CALLBACK", "WEBHOOK", "SERVER_FETCH"]),
   })
   .strict()
@@ -645,7 +645,7 @@ export const evidencePaymentSchema = z
     order_paid: z.boolean(),
     provider: z.literal("RAZORPAY"),
     provider_order_id: externalReferenceSchema,
-    provider_payment_id: externalReferenceSchema,
+    provider_payment_id: externalReferenceSchema.nullable(),
     transaction_id: transactionIdSchema,
     verification_sources: uniqueStringArray(z.enum(["CALLBACK", "WEBHOOK", "SERVER_FETCH"]), 3),
     webhook_signature_verified: z.boolean(),
@@ -929,6 +929,13 @@ function validateEvidenceOutcome(
         code: "custom",
         message: "Completed evidence requires captured and paid payment proof",
         path: ["payment"],
+      });
+    }
+    if (bundle.payment.provider_payment_id === null) {
+      context.addIssue({
+        code: "custom",
+        message: "Completed evidence requires a provider payment ID",
+        path: ["payment", "provider_payment_id"],
       });
     }
     if (
