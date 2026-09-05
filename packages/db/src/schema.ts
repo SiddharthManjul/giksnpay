@@ -109,6 +109,9 @@ export const providerEventProcessingStatuses = [
   "PROCESSED",
   "REJECTED",
 ] as const;
+export const entitlementStatuses = ["ISSUED", "REDEEMED", "EXPIRED", "REVOKED"] as const;
+export const mcpInvocationOutcomes = ["SUCCEEDED", "FAILED", "RATE_LIMITED"] as const;
+export const evidenceBundleStatuses = ["READY", "INVALID"] as const;
 
 const sha256Check = (column: { getSQL(): ReturnType<typeof sql> }) =>
   sql`length(${column}) = 64 and ${column} not glob '*[^0-9a-f]*'`;
@@ -623,6 +626,58 @@ export const auditEvents = sqliteTable(
     ),
     check("audit_events_occurrence_valid", sql`${table.occurredAt} = ${table.createdAt}`),
     check("audit_events_expires_after_occurrence", sql`${table.expiresAt} > ${table.occurredAt}`),
+  ],
+);
+
+export const evidenceBundles = sqliteTable(
+  "evidence_bundles",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    transactionId: text("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    status: text("status", { enum: evidenceBundleStatuses }).notNull().default("READY"),
+    schemaVersion: text("schema_version").notNull(),
+    bundleJson: text("bundle_json", { mode: "json" })
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    bundleHash: text("bundle_hash").notNull(),
+    signatureJson: text("signature_json", { mode: "json" })
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    signingKid: text("signing_kid").notNull(),
+    privateStorageKey: text("private_storage_key").notNull(),
+    retentionExpiresAt: integer("retention_expires_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("evidence_bundles_transaction_uq").on(table.transactionId),
+    uniqueIndex("evidence_bundles_hash_uq").on(table.bundleHash),
+    index("evidence_bundles_organization_created_idx").on(table.organizationId, table.createdAt),
+    index("evidence_bundles_retention_idx").on(table.retentionExpiresAt),
+    check("evidence_bundles_id_valid", sql`${table.id} glob 'evd_*' and length(${table.id}) = 30`),
+    check("evidence_bundles_status_valid", sql`${table.status} in ('READY', 'INVALID')`),
+    check("evidence_bundles_schema_valid", sql`${table.schemaVersion} = 'mindpay.evidence.1'`),
+    check(
+      "evidence_bundles_json_valid",
+      sql`json_valid(${table.bundleJson}) and json_type(${table.bundleJson}) = 'object' and json_valid(${table.signatureJson}) and json_type(${table.signatureJson}) = 'object'`,
+    ),
+    check("evidence_bundles_hash_valid", sha256Check(table.bundleHash)),
+    check(
+      "evidence_bundles_signing_kid_valid",
+      sql`length(${table.signingKid}) between 1 and 128 and ${table.signingKid} not glob '*[^A-Za-z0-9._:-]*'`,
+    ),
+    check(
+      "evidence_bundles_storage_key_valid",
+      sql`length(trim(${table.privateStorageKey})) between 8 and 1024`,
+    ),
+    check(
+      "evidence_bundles_retention_valid",
+      sql`${table.retentionExpiresAt} > ${table.createdAt}`,
+    ),
   ],
 );
 
@@ -1849,6 +1904,230 @@ export const marketplaceCacheVersions = sqliteTable(
   ],
 );
 
+export const platformSigningKeys = sqliteTable(
+  "platform_signing_keys",
+  {
+    id: text("id").primaryKey(),
+    kid: text("kid").notNull(),
+    purpose: text("purpose").notNull(),
+    publicJwk: text("public_jwk", { mode: "json" })
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    encryptedPrivateJwk: text("encrypted_private_jwk", { mode: "json" })
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    validFrom: integer("valid_from", { mode: "timestamp_ms" }).notNull(),
+    validUntil: integer("valid_until", { mode: "timestamp_ms" }),
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("platform_signing_keys_kid_uq").on(table.kid),
+    index("platform_signing_keys_active_idx").on(table.purpose, table.validFrom),
+    check("platform_signing_keys_id_valid", sql`length(${table.id}) between 8 and 160`),
+    check(
+      "platform_signing_keys_kid_valid",
+      sql`length(${table.kid}) between 1 and 128 and ${table.kid} not glob '*[^A-Za-z0-9._:-]*'`,
+    ),
+    check("platform_signing_keys_purpose_valid", sql`${table.purpose} = 'entitlement'`),
+    check(
+      "platform_signing_keys_public_jwk_valid",
+      sql`json_valid(${table.publicJwk}) and json_extract(${table.publicJwk}, '$.kty') = 'EC' and json_extract(${table.publicJwk}, '$.crv') = 'P-256' and json_type(${table.publicJwk}, '$.d') is null`,
+    ),
+    check(
+      "platform_signing_keys_private_valid",
+      sql`json_valid(${table.encryptedPrivateJwk}) and json_extract(${table.encryptedPrivateJwk}, '$.algorithm') = 'A256GCM'`,
+    ),
+    check(
+      "platform_signing_keys_lifecycle_valid",
+      sql`${table.createdAt} <= ${table.validFrom} and (${table.validUntil} is null or ${table.validUntil} > ${table.validFrom}) and (${table.revokedAt} is null or ${table.revokedAt} >= ${table.validFrom})`,
+    ),
+  ],
+);
+
+export const entitlements = sqliteTable(
+  "entitlements",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    transactionId: text("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    agentId: text("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    merchantId: text("merchant_id")
+      .notNull()
+      .references(() => merchants.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    serviceVersionId: text("service_version_id")
+      .notNull()
+      .references(() => serviceVersions.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    signingKid: text("signing_kid").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    scopesJson: text("scopes_json", { mode: "json" }).$type<readonly string[]>().notNull(),
+    status: text("status", { enum: entitlementStatuses }).notNull().default("ISSUED"),
+    issuedAt: integer("issued_at", { mode: "timestamp_ms" }).notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    redeemedAt: integer("redeemed_at", { mode: "timestamp_ms" }),
+    retentionExpiresAt: integer("retention_expires_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("entitlements_transaction_uq").on(table.transactionId),
+    uniqueIndex("entitlements_token_hash_uq").on(table.tokenHash),
+    index("entitlements_organization_status_idx").on(table.organizationId, table.status),
+    check("entitlements_id_valid", sql`${table.id} glob 'ent_*' and length(${table.id}) = 30`),
+    check("entitlements_token_hash_valid", sha256Check(table.tokenHash)),
+    check(
+      "entitlements_scopes_valid",
+      sql`json_valid(${table.scopesJson}) and json_array_length(${table.scopesJson}) = 1 and json_extract(${table.scopesJson}, '$[0]') = 'service:redeem'`,
+    ),
+    check(
+      "entitlements_status_valid",
+      sql`${table.status} in ('ISSUED', 'REDEEMED', 'EXPIRED', 'REVOKED')`,
+    ),
+    check(
+      "entitlements_lifecycle_valid",
+      sql`${table.createdAt} = ${table.issuedAt} and ${table.expiresAt} > ${table.issuedAt} and ${table.expiresAt} <= ${table.issuedAt} + 86400000 and ${table.retentionExpiresAt} >= ${table.expiresAt} and ((${table.status} = 'REDEEMED' and ${table.redeemedAt} is not null and ${table.redeemedAt} >= ${table.issuedAt}) or (${table.status} != 'REDEEMED' and ${table.redeemedAt} is null))`,
+    ),
+  ],
+);
+
+export const entitlementDeliveries = sqliteTable(
+  "entitlement_deliveries",
+  {
+    entitlementId: text("entitlement_id")
+      .primaryKey()
+      .references(() => entitlements.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    encryptedToken: text("encrypted_token", { mode: "json" })
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    check(
+      "entitlement_deliveries_ciphertext_valid",
+      sql`json_valid(${table.encryptedToken}) and json_extract(${table.encryptedToken}, '$.algorithm') = 'A256GCM'`,
+    ),
+    check("entitlement_deliveries_expiry_valid", sql`${table.expiresAt} > ${table.createdAt}`),
+  ],
+);
+
+export const fulfilmentResults = sqliteTable(
+  "fulfilment_results",
+  {
+    id: text("id").primaryKey(),
+    entitlementId: text("entitlement_id")
+      .notNull()
+      .references(() => entitlements.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    transactionId: text("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    deliveryReceiptId: text("delivery_receipt_id").notNull(),
+    serviceId: text("service_id").notNull(),
+    resultJson: text("result_json", { mode: "json" })
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    outputHash: text("output_hash").notNull(),
+    receiptJson: text("receipt_json", { mode: "json" })
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    receiptSignatureJson: text("receipt_signature_json", { mode: "json" })
+      .$type<Readonly<Record<string, unknown>>>()
+      .notNull(),
+    completedAt: integer("completed_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("fulfilment_results_entitlement_uq").on(table.entitlementId),
+    uniqueIndex("fulfilment_results_transaction_uq").on(table.transactionId),
+    uniqueIndex("fulfilment_results_receipt_uq").on(table.deliveryReceiptId),
+    check(
+      "fulfilment_results_id_valid",
+      sql`${table.id} glob 'gfr_*' and length(${table.id}) = 30`,
+    ),
+    check(
+      "fulfilment_results_service_valid",
+      sql`length(trim(${table.serviceId})) between 3 and 96`,
+    ),
+    check(
+      "fulfilment_results_json_valid",
+      sql`json_valid(${table.resultJson}) and json_valid(${table.receiptJson}) and json_valid(${table.receiptSignatureJson})`,
+    ),
+    check("fulfilment_results_output_hash_valid", sha256Check(table.outputHash)),
+    check("fulfilment_results_time_valid", sql`${table.createdAt} = ${table.completedAt}`),
+  ],
+);
+
+export const mcpRateLimits = sqliteTable(
+  "mcp_rate_limits",
+  {
+    subjectHash: text("subject_hash").notNull(),
+    windowStartedAt: integer("window_started_at", { mode: "timestamp_ms" }).notNull(),
+    requestCount: integer("request_count").notNull().default(1),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.subjectHash, table.windowStartedAt] }),
+    index("mcp_rate_limits_expiry_idx").on(table.expiresAt),
+    check("mcp_rate_limits_subject_valid", sha256Check(table.subjectHash)),
+    check("mcp_rate_limits_count_valid", sql`${table.requestCount} between 1 and 100000`),
+    check("mcp_rate_limits_time_valid", sql`${table.expiresAt} > ${table.windowStartedAt}`),
+  ],
+);
+
+export const mcpToolInvocations = sqliteTable(
+  "mcp_tool_invocations",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    agentId: text("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    toolName: text("tool_name").notNull(),
+    inputHash: text("input_hash").notNull(),
+    outputHash: text("output_hash"),
+    outcome: text("outcome", { enum: mcpInvocationOutcomes }).notNull(),
+    errorCode: text("error_code"),
+    occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    index("mcp_tool_invocations_organization_time_idx").on(table.organizationId, table.occurredAt),
+    check(
+      "mcp_tool_invocations_id_valid",
+      sql`${table.id} glob 'mci_*' and length(${table.id}) = 30`,
+    ),
+    check(
+      "mcp_tool_invocations_tool_valid",
+      sql`${table.toolName} in ('search_verified_services', 'get_verified_service', 'request_signed_offer', 'propose_purchase', 'get_transaction_status', 'get_evidence_bundle')`,
+    ),
+    check("mcp_tool_invocations_input_hash_valid", sha256Check(table.inputHash)),
+    check(
+      "mcp_tool_invocations_output_hash_valid",
+      sql`${table.outputHash} is null or (${sha256Check(table.outputHash)})`,
+    ),
+    check(
+      "mcp_tool_invocations_outcome_valid",
+      sql`${table.outcome} in ('SUCCEEDED', 'FAILED', 'RATE_LIMITED')`,
+    ),
+    check(
+      "mcp_tool_invocations_result_valid",
+      sql`(${table.outcome} = 'SUCCEEDED' and ${table.outputHash} is not null and ${table.errorCode} is null) or (${table.outcome} != 'SUCCEEDED' and ${table.outputHash} is null and length(${table.errorCode}) between 3 and 64)`,
+    ),
+  ],
+);
+
 export const schema = {
   account,
   agentKeys,
@@ -1865,9 +2144,15 @@ export const schema = {
   consumedNonces,
   demoWorkspaces,
   idempotencyRecords,
+  entitlementDeliveries,
+  entitlements,
+  evidenceBundles,
+  fulfilmentResults,
   mandateProofs,
   mandates,
   marketplaceCacheVersions,
+  mcpRateLimits,
+  mcpToolInvocations,
   merchantAdminEvents,
   merchantCatalogs,
   merchantKeys,
@@ -1879,6 +2164,7 @@ export const schema = {
   passkeyCredentials,
   passkeyRegistrationChallenges,
   paymentAttempts,
+  platformSigningKeys,
   providerEvents,
   rateLimit,
   replayNonces,
@@ -1924,6 +2210,8 @@ export type IdempotencyRecord = typeof idempotencyRecords.$inferSelect;
 export type NewIdempotencyRecord = typeof idempotencyRecords.$inferInsert;
 export type AuditEventRecord = typeof auditEvents.$inferSelect;
 export type NewAuditEventRecord = typeof auditEvents.$inferInsert;
+export type EvidenceBundleRecord = typeof evidenceBundles.$inferSelect;
+export type NewEvidenceBundleRecord = typeof evidenceBundles.$inferInsert;
 export type Agent = typeof agents.$inferSelect;
 export type NewAgent = typeof agents.$inferInsert;
 export type AgentVersionRecord = typeof agentVersions.$inferSelect;
@@ -1972,3 +2260,15 @@ export type MerchantAdminEvent = typeof merchantAdminEvents.$inferSelect;
 export type NewMerchantAdminEvent = typeof merchantAdminEvents.$inferInsert;
 export type MarketplaceCacheVersion = typeof marketplaceCacheVersions.$inferSelect;
 export type NewMarketplaceCacheVersion = typeof marketplaceCacheVersions.$inferInsert;
+export type PlatformSigningKey = typeof platformSigningKeys.$inferSelect;
+export type NewPlatformSigningKey = typeof platformSigningKeys.$inferInsert;
+export type EntitlementRecord = typeof entitlements.$inferSelect;
+export type NewEntitlementRecord = typeof entitlements.$inferInsert;
+export type EntitlementDelivery = typeof entitlementDeliveries.$inferSelect;
+export type NewEntitlementDelivery = typeof entitlementDeliveries.$inferInsert;
+export type FulfilmentResultRecord = typeof fulfilmentResults.$inferSelect;
+export type NewFulfilmentResultRecord = typeof fulfilmentResults.$inferInsert;
+export type McpRateLimit = typeof mcpRateLimits.$inferSelect;
+export type NewMcpRateLimit = typeof mcpRateLimits.$inferInsert;
+export type McpToolInvocation = typeof mcpToolInvocations.$inferSelect;
+export type NewMcpToolInvocation = typeof mcpToolInvocations.$inferInsert;
