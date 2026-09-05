@@ -18,6 +18,7 @@
     "@mindpay/contracts": "workspace:*",
     "@mindpay/crypto": "workspace:*",
     "@mindpay/domain": "workspace:*",
+    "@mindpay/mcp-tools": "workspace:*",
     "@mindpay/protocol-acp": "workspace:*",
     "@mindpay/razorpay": "workspace:*",
     "drizzle-orm": "catalog:",
