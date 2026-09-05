@@ -23,7 +23,10 @@
     "verify:phase-04": "node ./scripts/verify-phase-04.mjs",
     "verify:phase-05": "node ./scripts/verify-phase-05.mjs",
     "verify:phase-06": "node ./scripts/verify-phase-06.mjs",
-    "verify:phase-07": "node ./scripts/verify-phase-07.mjs"
+    "verify:phase-07": "node ./scripts/verify-phase-07.mjs",
+    "verify:phase-08": "node ./scripts/verify-phase-08.mjs",
+    "verify:phase-09": "node ./scripts/verify-phase-09.mjs",
+    "verify:phase-10": "node ./scripts/verify-phase-10.mjs"
   },
   "pnpm": {
     "overrides": {
@@ -32,6 +35,7 @@
     }
   },
   "devDependencies": {
+    "@axe-core/playwright": "catalog:",
     "@biomejs/biome": "catalog:",
     "@cloudflare/workers-types": "catalog:",
     "@playwright/test": "catalog:",
