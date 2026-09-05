@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "medium": {
+    "declaration": "CSS/vector/type only",
+    "details": [
+      "Interface surfaces, rules, color, and motion are implemented in CSS.",
+      "Interface icons are vector SVG rendered by the component library.",
+      "Manrope Variable and JetBrains Mono Variable are self-hosted application fonts.",
+      "No external image source or image-generation output is used by the shipping frontend."
+    ]
+  },
+  "reviewArtifacts": [
+    {
+      "path": ".impeccable/review/desktop.png",
+      "purpose": "Desktop finish-review evidence",
+      "shipsWithProduct": false
+    },
+    {
+      "path": ".impeccable/review/mobile.png",
+      "purpose": "Mobile finish-review evidence",
+      "shipsWithProduct": false
+    }
+  ],
+  "shippingRasters": []
+}
