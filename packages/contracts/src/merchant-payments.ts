@@ -70,6 +70,20 @@ export const merchantPaymentOrderResponseSchema = z
   .strict()
   .readonly();
 
+export const razorpayCheckoutCallbackSchema = z
+  .object({
+    razorpay_order_id: providerOrderIdSchema,
+    razorpay_payment_id: providerPaymentIdSchema,
+    razorpay_signature: z.string().regex(/^[0-9a-f]{64}$/u),
+  })
+  .strict()
+  .readonly();
+
+export const razorpayCheckoutCallbackResponseSchema = z
+  .object({ fulfilment_eligible: z.literal(false), state: z.literal("PAYMENT_RECONCILING") })
+  .strict()
+  .readonly();
+
 export const merchantPaymentEventTypeSchema = z.enum([
   "ORDER_PAID",
   "PAYMENT_CAPTURED",
