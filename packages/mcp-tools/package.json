@@ -12,6 +12,11 @@
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@mindpay/contracts": "workspace:*",
+    "@mindpay/crypto": "workspace:*",
+    "@modelcontextprotocol/server": "catalog:",
+    "zod": "catalog:"
+  },
   "devDependencies": {}
 }
