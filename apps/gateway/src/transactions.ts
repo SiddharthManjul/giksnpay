@@ -1,15 +1,22 @@
 import { importAgentKeyEncryptionKey, loadAgentPrivateSigningKey } from "@mindpay/agent-runtime";
 import {
   authenticatorTransportSchema,
+  authorizationApprovalRequestSchema,
+  authorizationChallengeRequestSchema,
+  createTransactionRequestSchema,
   type MerchantPaymentAuthorization,
   type MerchantPaymentOrderResponse,
   mandateIdSchema,
   merchantCheckoutSchema,
   merchantPaymentOrderResponseSchema,
-  offerIdSchema,
-  paymentRailSchema,
+  razorpayCheckoutCallbackResponseSchema,
+  razorpayCheckoutCallbackSchema,
   sha256HexSchema,
+  transactionDetailResponseSchema,
+  transactionActionResponseSchema,
+  transactionChallengeResponseSchema,
   transactionIdSchema,
+  transactionsResponseSchema,
 } from "@mindpay/contracts";
 import {
   base64UrlToBytes,
@@ -42,6 +49,7 @@ import {
   requireOrganizationCapability,
   resourceNotFound,
 } from "./authorization";
+import { broadcastAuditEvents, prepareAuditStatements } from "./audit";
 import {
   beginIdempotentMutation,
   completeIdempotentMutation,
@@ -73,29 +81,11 @@ export interface TransactionRouteDependencies {
 const signatureSchema = z
   .object({ alg: z.literal("ES256"), kid: z.string(), signature: z.string() })
   .strict();
-const createTransactionRequestSchema = z
-  .object({
-    checkout: merchantCheckoutSchema,
-    checkoutMandateId: mandateIdSchema,
-    checkoutSignature: signatureSchema,
-    offerHash: sha256HexSchema,
-    offerId: offerIdSchema,
-    paymentMandateId: mandateIdSchema,
-    paymentRail: paymentRailSchema,
-  })
-  .strict();
-const transactionChallengeRequestSchema = z
-  .object({ credentialId: z.string().regex(/^pkc_[0-7][0-9A-HJKMNP-TV-Z]{25}$/u) })
-  .strict();
-const transactionApprovalRequestSchema = z
-  .object({
-    challengeId: z.string().regex(/^apc_[0-7][0-9A-HJKMNP-TV-Z]{25}$/u),
-    response: z.record(z.string(), z.unknown()),
-  })
-  .strict();
 const transactionDecisionEvidenceSchema = z
   .object({
+    checkout: merchantCheckoutSchema,
     checkoutHash: sha256HexSchema,
+    checkoutSignatureVerified: z.boolean(),
     closedPayment: z
       .object({
         mandate: z.object({ checkout_session_id: z.string() }).passthrough(),
@@ -104,6 +94,7 @@ const transactionDecisionEvidenceSchema = z
       .passthrough()
       .nullable(),
     closedPaymentMandateHash: sha256HexSchema.nullable(),
+    offerSignatureVerified: z.boolean(),
   })
   .passthrough();
 
@@ -156,6 +147,7 @@ const transactionRowSchema = z
     currency: z.literal("INR"),
     id: z.string(),
     mandate_id: z.string(),
+    merchant_id: z.string(),
     organization_id: z.string(),
     policy_decision_json: z.string(),
     retention_expires_at: z.number().int().nonnegative(),
@@ -208,7 +200,7 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
     const [checkoutMandate, paymentMandate, commerce, consumedNonce] = await Promise.all([
       readMandate(context, request.data.checkoutMandateId),
       readMandate(context, request.data.paymentMandateId),
-      readCommerce(context.env.DB, request.data.checkout),
+      readCommerce(context.env.DB, request.data.checkout, evaluatedAt.getTime()),
       context.env.DB.prepare(
         "SELECT 1 AS found FROM consumed_nonces WHERE organization_id = ? AND scope = 'merchant-checkout' AND nonce = ?",
       )
@@ -318,6 +310,8 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
       totalBudgetSubunits: openPayment.total_budget_subunits,
     };
     const policy = evaluatePolicy(policyInput);
+    const offerSignatureVerified =
+      merchantApproved && exactService && commerce.availability === "available";
     const transactionId = `ctx_${createUlid(evaluatedAt.getTime())}`;
     const checkoutHash = await sha256CanonicalJsonHex(request.data.checkout);
     let closedMandates:
@@ -406,14 +400,89 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
           ? "APPROVAL_REQUIRED"
           : "APPROVED";
     const decisionEvidence = {
+      checkout: request.data.checkout,
       checkoutHash,
+      checkoutSignatureVerified: merchantSignatureValid.valid,
       closedCheckout: closedMandates?.closedCheckout ?? null,
       closedPayment: closedMandates?.closedPayment ?? null,
       closedPaymentMandateHash: closedMandates?.closedPayment.payloadHash ?? null,
+      offerSignatureVerified,
       policy,
       risk,
     };
     const retentionExpiresAt = evaluatedAt.getTime() + TRANSACTION_RETENTION_MS;
+    const audit = await prepareAuditStatements(
+      context.env,
+      transactionId,
+      [
+        {
+          actor: { id: principal.id, type: "USER" },
+          eventType: "USER_INTENT_RECEIVED",
+          payload: {
+            amount_subunits: request.data.checkout.total_subunits,
+            currency: request.data.checkout.currency,
+            service_id: commerce.external_id,
+          },
+        },
+        {
+          actor: { id: paymentMandate.agent_id, type: "AGENT" },
+          eventType: "MARKETPLACE_SEARCHED",
+          payload: { merchant_id: commerce.merchant_id, service_id: commerce.external_id },
+        },
+        {
+          actor: { id: commerce.merchant_id, type: "MERCHANT" },
+          eventType: "OFFER_RECEIVED",
+          payload: { offer_hash: request.data.offerHash, offer_id: request.data.offerId },
+        },
+        {
+          actor: { id: "mindpay_gateway", type: "MINDPAY" },
+          eventType: offerSignatureVerified ? "OFFER_VERIFIED" : "OFFER_INTEGRITY_FAILED",
+          payload: {
+            checkout_hash: checkoutHash,
+            checkout_signature_verified: merchantSignatureValid.valid,
+            offer_signature_verified: offerSignatureVerified,
+          },
+        },
+        {
+          actor: { id: "mindpay_policy", type: "SYSTEM" },
+          eventType: "POLICY_EVALUATED",
+          payload: policy,
+        },
+        {
+          actor: { id: "mindpay_risk", type: "SYSTEM" },
+          eventType: "RISK_EVALUATED",
+          payload: risk,
+        },
+        ...(policy.decision === "BLOCK"
+          ? ([
+              {
+                actor: { id: "mindpay_gateway", type: "MINDPAY" as const },
+                eventType: "TRANSACTION_BLOCKED" as const,
+                payload: { policy_reasons: policy.reasons, risk_reasons: risk.reasons },
+              },
+            ] as const)
+          : policy.decision === "APPROVAL_REQUIRED"
+            ? ([
+                {
+                  actor: { id: principal.id, type: "USER" as const },
+                  eventType: "USER_APPROVAL_REQUESTED" as const,
+                  payload: { amount_subunits: request.data.checkout.total_subunits },
+                },
+              ] as const)
+            : ([
+                {
+                  actor: { id: "mindpay_budget", type: "SYSTEM" as const },
+                  eventType: "BUDGET_RESERVED" as const,
+                  payload: {
+                    amount_subunits: request.data.checkout.total_subunits,
+                    mandate_id: paymentMandate.id,
+                  },
+                },
+              ] as const)),
+      ],
+      evaluatedAt,
+      retentionExpiresAt,
+    );
     const statements = [
       context.env.DB.prepare(
         `INSERT INTO transactions
@@ -476,6 +545,7 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
         ).bind(evaluatedAt.getTime(), transactionId),
       );
     }
+    statements.push(...audit.statements);
     try {
       await context.env.DB.batch(statements);
     } catch {
@@ -486,6 +556,10 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
         "BUDGET_UNAVAILABLE",
         "The proposal raced with replay or budget enforcement and was not reserved.",
       );
+    }
+    await broadcastAuditEvents(context.env, transactionId, audit.publications);
+    if (policy.decision === "BLOCK") {
+      await context.env.EVIDENCE_QUEUE?.send({ transactionId }).catch(() => undefined);
     }
     const responseState = policy.decision === "ALLOW" ? "BUDGET_RESERVED" : state;
     return completeIdempotentMutation(context, claim, 201, {
@@ -592,6 +666,27 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
           "The merchant payment order could not be created.",
         );
       }
+      const audit = await prepareAuditStatements(
+        context.env,
+        transaction.id,
+        [
+          {
+            actor: { id: transaction.agent_id, type: "AGENT" },
+            eventType: "CHECKOUT_CREATED",
+            payload: { attempt_number: attemptNumber, checkout_hash: evidence.checkoutHash },
+          },
+          {
+            actor: { id: "razorpay", type: "PAYMENT_PROVIDER" },
+            eventType: "RAZORPAY_ORDER_CREATED",
+            payload: {
+              amount_subunits: transaction.amount_subunits,
+              provider_order_id: providerResponse.provider_order_id,
+            },
+          },
+        ],
+        createdAt,
+        transaction.retention_expires_at,
+      );
       const results = await context.env.DB.batch([
         context.env.DB.prepare(
           `INSERT INTO payment_attempts
@@ -625,6 +720,7 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
         context.env.DB.prepare(
           "UPDATE transactions SET state = 'PAYMENT_PENDING', updated_at = ? WHERE id = ? AND state = 'ORDER_CREATED'",
         ).bind(createdAt.getTime(), transaction.id),
+        ...audit.statements,
       ]);
       if ((results[3]?.meta.changes ?? 0) !== 1) {
         return failIdempotentMutation(
@@ -635,7 +731,78 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
           "The transaction changed while its payment order was being recorded.",
         );
       }
+      await broadcastAuditEvents(context.env, transaction.id, audit.publications);
       return completeIdempotentMutation(context, claim, 201, providerResponse);
+    },
+  );
+
+  routes.post(
+    "/:transactionId/payment-callback",
+    requireOrganizationCapability("agent:write"),
+    async (context) => {
+      const body = await readJsonBody(context.req.raw);
+      const request = razorpayCheckoutCallbackSchema.safeParse(body);
+      if (!request.success) {
+        return apiError(context, 400, "INVALID_REQUEST", "The Razorpay callback is invalid.");
+      }
+      const transactionId = context.req.param("transactionId") ?? "";
+      const receivedAt = now();
+      const claim = await beginIdempotentMutation(
+        context,
+        "transaction-payment-callback",
+        transactionId,
+        request.data,
+        receivedAt.getTime(),
+      );
+      if (claim instanceof Response) return claim;
+      const [transaction, attempt] = await Promise.all([
+        readTransaction(context, transactionId),
+        context.env.DB.prepare(
+          `SELECT id FROM payment_attempts
+           WHERE transaction_id = ? AND provider_order_id = ? AND status IN ('PENDING', 'RECONCILING')
+           LIMIT 1`,
+        )
+          .bind(transactionId, request.data.razorpay_order_id)
+          .first<{ id: string }>(),
+      ]);
+      if (transaction === undefined || attempt === null) {
+        return failIdempotentMutation(
+          context,
+          claim,
+          404,
+          "RESOURCE_NOT_FOUND",
+          "The matching payment attempt was not found.",
+        );
+      }
+      if (context.env.SIGNALWORKS === undefined) {
+        return failIdempotentMutation(
+          context,
+          claim,
+          500,
+          "PAYMENT_PROVIDER_UNAVAILABLE",
+          "The merchant callback service is unavailable.",
+        );
+      }
+      const response = await context.env.SIGNALWORKS.fetch(
+        new Request("https://merchant-demo.example.com/payments/callback", {
+          body: JSON.stringify(request.data),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+        }),
+      );
+      const result = razorpayCheckoutCallbackResponseSchema.safeParse(
+        await response.json().catch(() => undefined),
+      );
+      if (!response.ok || !result.success) {
+        return failIdempotentMutation(
+          context,
+          claim,
+          400,
+          "INVALID_REQUEST",
+          "The merchant rejected the Razorpay callback proof.",
+        );
+      }
+      return completeIdempotentMutation(context, claim, 202, result.data);
     },
   );
 
@@ -686,6 +853,23 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
         );
       }
       const reservationId = `rsv_${createUlid(retriedAt.getTime())}`;
+      const audit = await prepareAuditStatements(
+        context.env,
+        transaction.id,
+        [
+          {
+            actor: { id: "mindpay_budget", type: "SYSTEM" },
+            eventType: "BUDGET_RESERVED",
+            payload: {
+              amount_subunits: transaction.amount_subunits,
+              mandate_id: transaction.mandate_id,
+              reason: "payment_retry",
+            },
+          },
+        ],
+        retriedAt,
+        transaction.retention_expires_at,
+      );
       try {
         const results = await context.env.DB.batch([
           reserveSpendStatement(context.env.DB, {
@@ -701,6 +885,7 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
           context.env.DB.prepare(
             "UPDATE transactions SET state = 'BUDGET_RESERVED', updated_at = ? WHERE id = ? AND state = 'PAYMENT_FAILED'",
           ).bind(retriedAt.getTime(), transaction.id),
+          ...audit.statements,
         ]);
         if ((results[1]?.meta.changes ?? 0) !== 1) throw new Error("retry raced");
       } catch {
@@ -712,6 +897,7 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
           "Budget could not be reserved for another payment attempt.",
         );
       }
+      await broadcastAuditEvents(context.env, transaction.id, audit.publications);
       return completeIdempotentMutation(context, claim, 200, {
         reservationId,
         state: "BUDGET_RESERVED",
@@ -720,10 +906,76 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
     },
   );
 
+  routes.get("/", async (context) => {
+    const result = await context.env.DB.prepare(
+      `SELECT id, amount_subunits, currency, merchant_id, state, created_at, updated_at
+       FROM transactions WHERE organization_id = ? AND user_id = ?
+       ORDER BY created_at DESC, id DESC LIMIT 1000`,
+    )
+      .bind(context.get("organizationAuthorization").organization.id, context.get("principal").id)
+      .all();
+    return context.json(
+      transactionsResponseSchema.parse({
+        transactions: result.results.map((untrusted) => {
+          const row = z
+            .object({
+              amount_subunits: z.number().int().nonnegative(),
+              created_at: z.number().int().nonnegative(),
+              currency: z.literal("INR"),
+              id: transactionIdSchema,
+              merchant_id: z.string(),
+              state: z.string(),
+              updated_at: z.number().int().nonnegative(),
+            })
+            .strict()
+            .parse(untrusted);
+          return {
+            amountSubunits: row.amount_subunits,
+            createdAt: utcTimestampFromDate(new Date(row.created_at)),
+            currency: row.currency,
+            id: row.id,
+            merchantId: row.merchant_id,
+            state: row.state,
+            updatedAt: utcTimestampFromDate(new Date(row.updated_at)),
+          };
+        }),
+      }),
+    );
+  });
+
+  routes.get("/:transactionId/payment-order", async (context) => {
+    const transaction = await readTransaction(context, context.req.param("transactionId") ?? "");
+    if (transaction === undefined) return resourceNotFound(context);
+    const attempt = await context.env.DB.prepare(
+      `SELECT provider_snapshot_json FROM payment_attempts
+       WHERE transaction_id = ? AND provider_snapshot_json IS NOT NULL
+       ORDER BY attempt_number DESC LIMIT 1`,
+    )
+      .bind(transaction.id)
+      .first<{ provider_snapshot_json: string }>();
+    if (attempt === null) return resourceNotFound(context);
+    try {
+      return context.json(
+        merchantPaymentOrderResponseSchema.parse(
+          JSON.parse(attempt.provider_snapshot_json) as unknown,
+        ),
+      );
+    } catch {
+      return resourceNotFound(context);
+    }
+  });
+
   routes.get("/:transactionId", async (context) => {
     const transaction = await readTransaction(context, context.req.param("transactionId") ?? "");
     if (transaction === undefined) return resourceNotFound(context);
-    return context.json(serializeTransaction(transaction));
+    const service = await context.env.DB.prepare(
+      `SELECT s.external_id, s.name, sv.version FROM service_versions sv
+       JOIN services s ON s.id = sv.service_id WHERE sv.id = ? LIMIT 1`,
+    )
+      .bind(transaction.service_version_id)
+      .first();
+    if (service === null) return resourceNotFound(context);
+    return context.json(serializeTransaction(transaction, service));
   });
 
   routes.post(
@@ -731,7 +983,7 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
     requireOrganizationCapability("agent:write"),
     async (context) => {
       const body = await readJsonBody(context.req.raw);
-      const request = transactionChallengeRequestSchema.safeParse(body);
+      const request = authorizationChallengeRequestSchema.safeParse(body);
       const createdAt = now();
       if (!request.success) {
         return apiError(
@@ -826,7 +1078,12 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
           createdAt.getTime(),
         )
         .run();
-      return completeIdempotentMutation(context, claim, 201, { challengeId, options, payloadHash });
+      return completeIdempotentMutation(
+        context,
+        claim,
+        201,
+        transactionChallengeResponseSchema.parse({ challengeId, options, payloadHash }),
+      );
     },
   );
 
@@ -835,7 +1092,7 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
     requireOrganizationCapability("agent:write"),
     async (context) => {
       const body = await readJsonBody(context.req.raw);
-      const request = transactionApprovalRequestSchema.safeParse(body);
+      const request = authorizationApprovalRequestSchema.safeParse(body);
       const approvedAt = now();
       if (!request.success) {
         return apiError(
@@ -980,6 +1237,31 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
       const reservationId = `rsv_${createUlid(approvedAt.getTime())}`;
       const proofHash = await sha256CanonicalJsonHex(request.data.response);
       const retentionExpiresAt = approvedAt.getTime() + TRANSACTION_RETENTION_MS;
+      const audit = await prepareAuditStatements(
+        context.env,
+        transaction.id,
+        [
+          {
+            actor: { id: transaction.user_id, type: "USER" },
+            eventType: "USER_APPROVAL_VERIFIED",
+            payload: {
+              challenge_id: request.data.challengeId,
+              credential_id_hash: await sha256Hex(passkey.credential_id),
+              payload_hash: expectedPayloadHash,
+            },
+          },
+          {
+            actor: { id: "mindpay_budget", type: "SYSTEM" },
+            eventType: "BUDGET_RESERVED",
+            payload: {
+              amount_subunits: transaction.amount_subunits,
+              mandate_id: transaction.mandate_id,
+            },
+          },
+        ],
+        approvedAt,
+        transaction.retention_expires_at,
+      );
       try {
         const results = await context.env.DB.batch([
           context.env.DB.prepare(
@@ -1028,6 +1310,7 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
           context.env.DB.prepare(
             "UPDATE transactions SET state = 'BUDGET_RESERVED', updated_at = ? WHERE id = ? AND state = 'APPROVED'",
           ).bind(approvedAt.getTime(), transaction.id),
+          ...audit.statements,
         ]);
         if ((results[0]?.meta.changes ?? 0) !== 1 || (results[4]?.meta.changes ?? 0) !== 1) {
           throw new Error("Transaction state raced");
@@ -1041,12 +1324,18 @@ export function createTransactionRoutes(dependencies: TransactionRouteDependenci
           "Approval succeeded but budget is no longer available; no reservation was created.",
         );
       }
-      return completeIdempotentMutation(context, claim, 200, {
-        orderCreationInvoked: false,
-        reservationId,
-        state: "BUDGET_RESERVED",
-        transactionId: transaction.id,
-      });
+      await broadcastAuditEvents(context.env, transaction.id, audit.publications);
+      return completeIdempotentMutation(
+        context,
+        claim,
+        200,
+        transactionActionResponseSchema.parse({
+          orderCreationInvoked: false,
+          reservationId,
+          state: "BUDGET_RESERVED",
+          transactionId: transaction.id,
+        }),
+      );
     },
   );
 
@@ -1177,6 +1466,7 @@ async function readPasskey(context: Context<GatewayEnvironment>, id: string) {
 async function readCommerce(
   database: D1Database,
   checkout: z.infer<typeof merchantCheckoutSchema>,
+  nowEpochMs: number,
 ) {
   const line = checkout.line_items[0];
   if (line === undefined) return undefined;
@@ -1189,9 +1479,11 @@ async function readCommerce(
        m.risk_tier AS merchant_risk_tier
        FROM service_versions sv JOIN services s ON s.id = sv.service_id
        JOIN merchants m ON m.id = s.merchant_id
-       WHERE m.id = ? AND s.external_id = ? AND sv.version = ? LIMIT 1`,
+       JOIN merchant_catalogs mc ON mc.id = m.current_catalog_id AND mc.catalog_hash = sv.catalog_hash
+       WHERE m.id = ? AND s.external_id = ? AND sv.version = ?
+         AND s.current_version_id = sv.id AND mc.expires_at > ? LIMIT 1`,
     )
-    .bind(checkout.merchant_id, line.service_id, line.service_version)
+    .bind(checkout.merchant_id, line.service_id, line.service_version, nowEpochMs)
     .first();
   return row === null ? undefined : commerceRowSchema.parse(row);
 }
@@ -1287,13 +1579,31 @@ function riskScore(tier: "HIGH" | "LOW" | "MEDIUM"): number {
   return tier === "LOW" ? 20 : tier === "MEDIUM" ? 50 : 80;
 }
 
-function serializeTransaction(transaction: z.infer<typeof transactionRowSchema>) {
-  return Object.freeze({
+function serializeTransaction(
+  transaction: z.infer<typeof transactionRowSchema>,
+  untrustedService: unknown,
+) {
+  const service = z
+    .object({ external_id: z.string(), name: z.string(), version: z.string() })
+    .strict()
+    .parse(untrustedService);
+  return transactionDetailResponseSchema.parse({
+    agentId: transaction.agent_id,
     amountSubunits: transaction.amount_subunits,
+    createdAt: utcTimestampFromDate(new Date(transaction.created_at)),
     currency: transaction.currency,
     decisionEvidence: JSON.parse(transaction.policy_decision_json) as unknown,
     id: transaction.id,
+    mandateId: transaction.mandate_id,
+    merchantId: transaction.merchant_id,
+    paymentRail: "razorpay:test",
+    service: {
+      externalId: service.external_id,
+      name: service.name,
+      version: service.version,
+    },
     state: transaction.state,
+    updatedAt: utcTimestampFromDate(new Date(transaction.updated_at)),
   });
 }
 
