@@ -9,7 +9,8 @@
     "enabled": true
   },
   "vars": {
-    "ENVIRONMENT": "development"
+    "ENVIRONMENT": "development",
+    "MINDPAY_API_AUDIENCE": "https://api.mindpay.example/"
   },
   "d1_databases": [
     {
