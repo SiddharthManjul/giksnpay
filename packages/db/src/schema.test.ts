@@ -21,6 +21,7 @@ import {
   approvalChallengeStates,
   approvalChallenges,
   auditEvents,
+  evidenceBundles,
   consumedNonceSources,
   consumedNonces,
   demoWorkspaces,
@@ -86,10 +87,16 @@ describe("MindPay D1 schema", () => {
       "audit_events",
       "consumed_nonces",
       "demo_workspaces",
+      "entitlement_deliveries",
+      "entitlements",
+      "evidence_bundles",
+      "fulfilment_results",
       "idempotency_records",
       "mandate_proofs",
       "mandates",
       "marketplace_cache_versions",
+      "mcp_rate_limits",
+      "mcp_tool_invocations",
       "merchant_admin_events",
       "merchant_catalogs",
       "merchant_keys",
@@ -101,6 +108,7 @@ describe("MindPay D1 schema", () => {
       "passkey_credentials",
       "passkey_registration_challenges",
       "payment_attempts",
+      "platform_signing_keys",
       "provider_events",
       "rate_limit",
       "replay_nonces",
@@ -443,6 +451,23 @@ describe("MindPay D1 schema", () => {
       "audit_events_event_hash_uq",
       "audit_events_jti_uq",
       "audit_events_transaction_sequence_uq",
+    ]);
+  });
+
+  it("stores immutable private evidence envelopes with public-safe identifiers", () => {
+    expect(columnNames(evidenceBundles)).toEqual([
+      "id",
+      "organization_id",
+      "transaction_id",
+      "status",
+      "schema_version",
+      "bundle_json",
+      "bundle_hash",
+      "signature_json",
+      "signing_kid",
+      "private_storage_key",
+      "retention_expires_at",
+      "created_at",
     ]);
   });
 });
