@@ -65,6 +65,11 @@ export const merchantAdministrationResponseSchema = z
   .strict()
   .readonly();
 
+export const merchantAdministrationListResponseSchema = z
+  .object({ merchants: z.array(merchantAdministrationResponseSchema).max(1_000).readonly() })
+  .strict()
+  .readonly();
+
 export const marketplaceServiceIdSchema = z
   .string()
   .regex(/^service_[0-7][0-9A-HJKMNP-TV-Z]{25}$/u);
