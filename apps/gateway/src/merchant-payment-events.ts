@@ -13,6 +13,8 @@ import {
 import { createUlid } from "@mindpay/domain";
 import { Hono } from "hono";
 import type { GatewayEnvironment } from "./authorization";
+import { broadcastAuditEvents, prepareAuditStatements } from "./audit";
+import { preparePaidEntitlement } from "./entitlements";
 
 const PAYMENT_EVENT_RETENTION_MS = 7 * 365 * 24 * 60 * 60 * 1_000;
 
@@ -56,23 +58,36 @@ export function createMerchantPaymentEventRoutes(
     );
     if (!verified) return context.json({ code: "INVALID_PAYMENT_EVENT_SIGNATURE" }, 401);
     const transaction = await context.env.DB.prepare(
-      "SELECT id, organization_id, mandate_id, merchant_id, state, retention_expires_at FROM transactions WHERE id = ? AND merchant_id = ? LIMIT 1",
+      `SELECT t.id, t.organization_id, t.user_id, t.agent_id, t.mandate_id, t.merchant_id,
+       t.service_version_id, t.amount_subunits, t.state, t.retention_expires_at, md.max_attempts
+       FROM transactions t JOIN mandates md ON md.id = t.mandate_id
+       WHERE t.id = ? AND t.merchant_id = ? LIMIT 1`,
     )
       .bind(event.transaction_id, event.merchant_id)
       .first<{
         id: string;
+        agent_id: string;
+        amount_subunits: number;
         mandate_id: string;
         merchant_id: string;
+        max_attempts: number | null;
         organization_id: string;
         retention_expires_at: number;
+        service_version_id: string;
         state: string;
+        user_id: string;
       }>();
     if (transaction === null) return context.json({ code: "PAYMENT_EVENT_NOT_FOUND" }, 404);
     const attempt = await context.env.DB.prepare(
-      "SELECT id, provider_order_id, status FROM payment_attempts WHERE transaction_id = ? AND attempt_number = ? LIMIT 1",
+      "SELECT id, checkout_hash, provider_order_id, status FROM payment_attempts WHERE transaction_id = ? AND attempt_number = ? LIMIT 1",
     )
       .bind(transaction.id, event.attempt_number)
-      .first<{ id: string; provider_order_id: string | null; status: string }>();
+      .first<{
+        checkout_hash: string;
+        id: string;
+        provider_order_id: string | null;
+        status: string;
+      }>();
     if (attempt === null || attempt.provider_order_id !== event.provider_order_id) {
       return context.json({ code: "PAYMENT_EVENT_MISMATCH" }, 409);
     }
@@ -82,6 +97,7 @@ export function createMerchantPaymentEventRoutes(
       .bind(transaction.id)
       .first<{ id: string }>();
     const statements: D1PreparedStatement[] = [];
+    let entitlementStatements: readonly D1PreparedStatement[] = [];
     let nextState = transaction.state;
     if (event.event_type === "PAYMENT_FAILED") {
       nextState = "PAYMENT_FAILED";
@@ -121,6 +137,22 @@ export function createMerchantPaymentEventRoutes(
         );
       } else {
         nextState = "PAYMENT_CAPTURED";
+        const entitlement = await preparePaidEntitlement(
+          context.env,
+          {
+            agentId: transaction.agent_id,
+            amountSubunits: transaction.amount_subunits,
+            checkoutHash: attempt.checkout_hash,
+            merchantId: transaction.merchant_id,
+            organizationId: transaction.organization_id,
+            retentionExpiresAt: transaction.retention_expires_at,
+            serviceVersionId: transaction.service_version_id,
+            transactionId: transaction.id,
+            userId: transaction.user_id,
+          },
+          receivedAt,
+        );
+        entitlementStatements = entitlement.statements;
         statements.push(
           context.env.DB.prepare(
             "UPDATE payment_attempts SET provider_payment_id = ?, status = 'SUCCEEDED', order_status = 'paid', payment_status = 'captured', fulfilment_eligible = 1, provider_snapshot_json = ?, completed_at = ?, updated_at = ? WHERE id = ? AND status IN ('CREATED', 'PENDING')",
@@ -207,10 +239,87 @@ export function createMerchantPaymentEventRoutes(
         receivedAt.getTime(),
       ),
     );
+    statements.push(...entitlementStatements);
+    const audit = await prepareAuditStatements(
+      context.env,
+      transaction.id,
+      [
+        {
+          actor: { id: transaction.merchant_id, type: "MERCHANT" },
+          eventType: "RAZORPAY_WEBHOOK_VERIFIED",
+          payload: {
+            merchant_event_type: event.event_type,
+            payload_hash: payloadHash,
+            provider_event_id: event.event_id,
+          },
+        },
+        ...(event.event_type === "PAYMENT_FAILED"
+          ? ([
+              {
+                actor: { id: "razorpay", type: "PAYMENT_PROVIDER" as const },
+                eventType: "PAYMENT_FAILED" as const,
+                payload: {
+                  attempt_number: event.attempt_number,
+                  provider_order_id: event.provider_order_id,
+                },
+              },
+              ...(activeReservation === null
+                ? []
+                : [
+                    {
+                      actor: { id: "mindpay_budget", type: "SYSTEM" as const },
+                      eventType: "BUDGET_RELEASED" as const,
+                      payload: {
+                        amount_subunits: transaction.amount_subunits,
+                        reservation_id: activeReservation.id,
+                      },
+                    },
+                  ]),
+            ] as const)
+          : event.fulfilment_eligible && activeReservation !== null
+            ? ([
+                {
+                  actor: { id: "razorpay", type: "PAYMENT_PROVIDER" as const },
+                  eventType: "PAYMENT_CAPTURED" as const,
+                  payload: {
+                    amount_subunits: transaction.amount_subunits,
+                    provider_order_id: event.provider_order_id,
+                    provider_payment_id: event.provider_payment_id,
+                  },
+                },
+                {
+                  actor: { id: "mindpay_budget", type: "SYSTEM" as const },
+                  eventType: "BUDGET_COMMITTED" as const,
+                  payload: {
+                    amount_subunits: transaction.amount_subunits,
+                    reservation_id: activeReservation.id,
+                  },
+                },
+                {
+                  actor: { id: "mindpay_gateway", type: "MINDPAY" as const },
+                  eventType: "ENTITLEMENT_ISSUED" as const,
+                  payload: { transaction_id: transaction.id },
+                },
+              ] as const)
+            : []),
+      ],
+      receivedAt,
+      transaction.retention_expires_at,
+    );
+    statements.push(...audit.statements);
     try {
       await context.env.DB.batch(statements);
     } catch {
       return context.json({ code: "PAYMENT_EVENT_STATE_CONFLICT" }, 409);
+    }
+    await broadcastAuditEvents(context.env, transaction.id, audit.publications);
+    if (
+      event.event_type === "PAYMENT_FAILED" &&
+      event.attempt_number >= (transaction.max_attempts ?? 1)
+    ) {
+      await context.env.EVIDENCE_QUEUE?.send({ transactionId: transaction.id }).catch(
+        () => undefined,
+      );
     }
     return new Response(null, { status: 204 });
   });
@@ -267,7 +376,7 @@ async function verifyMerchantPaymentPublication(
   }
 }
 
-async function validMachineToken(
+export async function validMachineToken(
   authorizationHeader: string | undefined,
   bindings: GatewayEnvironment["Bindings"],
 ): Promise<boolean> {
