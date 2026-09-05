@@ -1,34 +1,77 @@
-import { PRODUCT_NAME } from "@/lib/product";
+import { ArrowRight, Fingerprint, LockKeyhole, ShieldCheck } from "lucide-react";
+import { AuthorityBoard } from "@/components/authority-board";
+import { PublicShell } from "@/components/public-shell";
+import { ButtonLink } from "@/components/ui";
 
-const controlPoints = [
-  "Verified merchants and signed offers",
-  "User-owned spending mandates",
-  "Deterministic payment policy",
-  "Single-use service entitlements",
-  "Cryptographically verifiable evidence",
+const safeguards = [
+  [
+    "Agents propose. Policy decides.",
+    "Model output never controls payment, verification, entitlement, or audit authority.",
+  ],
+  [
+    "Money moves under a mandate.",
+    "Exact services, merchants, rails, budgets, thresholds, expiry, and attempt limits stay user-owned.",
+  ],
+  [
+    "Every transition leaves proof.",
+    "Signed append-only events become a portable evidence bundle that anyone can verify.",
+  ],
 ] as const;
 
 export default function HomePage() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-6 py-16 sm:px-10">
-      <p className="mb-6 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-        Trust layer for autonomous agents
-      </p>
-      <h1 className="max-w-4xl text-5xl font-semibold leading-[1.04] tracking-[-0.04em] sm:text-7xl">
-        {PRODUCT_NAME} keeps AI useful without giving it unchecked authority over money.
-      </h1>
-      <p className="mt-8 max-w-2xl text-lg leading-8 text-[var(--muted)]">
-        Agents can discover, compare, and propose. Verified code controls approval, payment,
-        fulfilment, and evidence.
-      </p>
-      <ul className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--border)] sm:grid-cols-2">
-        {controlPoints.map((point) => (
-          <li className="bg-[var(--surface)] px-6 py-5 text-sm font-medium" key={point}>
-            {point}
-          </li>
-        ))}
-      </ul>
-      <p className="mt-8 text-sm text-[var(--muted)]">Razorpay Test Mode build in progress.</p>
-    </main>
+    <PublicShell>
+      <main id="main-content">
+        <section className="hero">
+          <div className="hero-copy">
+            <h1 className="balance">
+              AI can act. <em>Money still needs authority.</em>
+            </h1>
+            <p>
+              MindPay lets autonomous agents discover and buy useful services while deterministic
+              code keeps control of approval, payment, fulfilment, and evidence.
+            </p>
+            <div className="hero-actions">
+              <ButtonLink href="/demo" tone="signal">
+                Run the controlled demo <ArrowRight size={16} />
+              </ButtonLink>
+              <ButtonLink href="/how-it-works" tone="secondary">
+                Inspect the boundary
+              </ButtonLink>
+            </div>
+            <div className="truth-line">
+              <span>
+                <ShieldCheck size={14} /> Verified merchants
+              </span>
+              <span>
+                <Fingerprint size={14} /> Passkey approval
+              </span>
+              <span>
+                <LockKeyhole size={14} /> No card data stored
+              </span>
+            </div>
+          </div>
+          <AuthorityBoard />
+        </section>
+        <section className="section">
+          <div className="section-heading">
+            <h2 className="balance">A control plane, not another wallet.</h2>
+            <p>
+              The agent handles language and discovery. The authority rail below handles facts:
+              signatures, exact integers, legal transitions, and a proof chain that cannot be
+              rewritten after the result.
+            </p>
+          </div>
+          <div className="ledger-list">
+            {safeguards.map(([title, body]) => (
+              <article className="ledger-item" key={title}>
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </main>
+    </PublicShell>
   );
 }
