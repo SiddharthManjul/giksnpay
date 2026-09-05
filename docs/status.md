@@ -1,13 +1,13 @@
 # MindPay implementation status
 
-Last updated: 2026-09-04
+Last updated: 2026-09-05
 
 ## Current phase
 
-Phases 0 through 7 are complete. Real Razorpay Test Mode success and failure evidence is recorded,
-including captured/paid reconciliation, failure release, one bounded retry, and retry exhaustion.
-The next implementation ticket is MP-0801, entitlement, redemption, MCP, and delivery-receipt
-contracts.
+Phases 0 through 10 are complete. Terminal transactions now produce signed, independently
+verifiable evidence, and the responsive frontend drives every critical action from shared contracts
+and canonical server state. The next implementation ticket is MP-1101, the Phase 11 security and
+reliability hardening pass.
 
 ## Phase progress
 
@@ -21,9 +21,9 @@ contracts.
 | 5. Agents and runtime | Complete | Typed approved tools and manual fallback work |
 | 6. Mandates, policy, and risk | Complete | ₹299 allows, ₹449 reviews, and ₹799 blocks |
 | 7. Razorpay Test Mode | Complete | Success, failure, deduplication, and reconciliation pass |
-| 8. Entitlements and MCP | Not started | A paid entitlement redeems exactly once |
-| 9. Audit and evidence | Not started | Public verification detects any mutation |
-| 10. Frontend completion | Not started | Critical flows work accessibly on supported viewports |
+| 8. Entitlements and MCP | Complete | A paid entitlement redeems exactly once |
+| 9. Audit and evidence | Complete | Public verification detects any mutation |
+| 10. Frontend completion | Complete | Critical flows work accessibly on supported viewports |
 | 11. Hardening and reliability | Not started | Security, eval, chaos, and performance targets pass |
 | 12. Deployment and submission | Not started | Public demo and clean-room setup pass |
 
@@ -633,10 +633,86 @@ Verification record: `docs/verification/phase-07.md`.
 - Added a secret-safe live verification command and retained no key secret, webhook secret, card
   data, CVV, or full callback signature.
 
+## Phase 8 activity
+
+### MP-0801 through MP-0807 complete
+
+- Added strict ES256 entitlement JWT, redemption input, service result, fulfilment status, delivery
+  receipt, JWKS, and exact MindPay/SignalWorks MCP tool contracts. One `service:redeem` scope is the
+  only accepted authority, and cross-service result/receipt combinations fail schema validation.
+- Added an encrypted platform entitlement signing key, public JWKS publication, a 15-minute token,
+  canonical SHA-256 token storage, and a separate A256GCM delivery ciphertext. Issuance occurs only
+  after exact captured-and-paid reconciliation and advances the transaction atomically.
+- Added immutable D1 state for entitlements, encrypted delivery, verified results, MCP rate windows,
+  and tool invocations, with payment/tenant/binding/lifecycle triggers and replay uniqueness.
+- Added SignalWorks verification against MindPay JWKS and local merchant payment truth, atomic
+  one-time consumption, concurrent replay denial, one structured-output retry, deterministic demo
+  fixtures with no live-market claims, canonical result hashing, and signed delivery receipts.
+- Added MindPay receipt verification for merchant key lifecycle, issuer, audience, entitlement,
+  transaction, agent, service, output hash, completion time, and exact duplicate signature before
+  immutable result storage and `FULFILLED` transition.
+- Added official TypeScript SDK remote MCP handlers. SignalWorks exposes exactly three fulfilment
+  tools; MindPay exposes exactly six non-payment tools with session/org auth, published agent tool
+  scopes, verified-commerce bounds, Host/Origin checks, D1 rate limits, and immutable invocation
+  audit rows.
+- Added adversarial contract, JWT, actual MCP protocol, Miniflare, D1, paid/unpaid, concurrent
+  replay, structured-output failure, signed receipt, and idempotent delivery coverage plus the
+  `pnpm verify:phase-08` exit command.
+
+Verification record: `docs/verification/phase-08.md`.
+
+## Phase 9 activity
+
+### MP-0901 through MP-0906 complete
+
+- Added concurrency-safe, append-only, canonical audit events with full-payload hashes, safe redacted
+  payloads, preceding hashes, contiguous sequences, ES256 signatures, and D1 immutability triggers.
+- Coupled intent, offer, policy, risk, approval, reservation, order, payment, entitlement,
+  fulfilment, completion, block, failure, and evidence events to their authoritative mutations.
+- Added a transaction Durable Object for low-latency refresh hints while keeping D1 canonical and
+  reauthorizing user, organization, demo lifetime, and transaction ownership at WebSocket upgrade.
+- Added idempotent terminal evidence assembly for successful, blocked, and payment-failed outcomes,
+  private R2 supporting storage, signed D1 indexing, and the atomic `EVIDENCE_READY` transition.
+- Added a public redacted verifier and portable download with the platform and audit signatures,
+  nine explicit proof results, and no prompts, secrets, raw provider payloads, private keys, cookies,
+  session tokens, or private object addresses.
+- Added portable-envelope mutation coverage for event, checkout, receipt, bundle hash/signature,
+  leaked and explicitly redacted credential fields, malformed stored JSON, concurrent append, and
+  all three outcome integrations.
+
+Verification record: `docs/verification/phase-09.md`.
+
+## Phase 10 activity
+
+### MP-1001 through MP-1010 complete
+
+- Rebuilt the web product as a responsive financial-control ledger with self-hosted typography,
+  exact tabular money, accessible status semantics, keyboard focus, skip navigation, reduced motion,
+  mobile navigation, and narrow security headers for the Gateway and Razorpay checkout boundary.
+- Added real public landing, how-it-works, marketplace, sign-in, isolated demo, verifier entry, and
+  evidence pages backed by shared Zod contracts rather than invented product data.
+- Added the authenticated dashboard, verified marketplace/service trust, agent identity/version
+  builder, approved tool binding, run transcript, provider-outage fallback, mandate builder,
+  passkey registration/activation, and canonical spend meter.
+- Added a server-side purchase-preparation boundary that converts a successful signed proposal and
+  active mandate pair into a signed merchant checkout without letting the browser create authority.
+- Added transaction detail with exact agent/service/mandate/rail bindings, structured policy and risk
+  evidence, passkey step-up, safe Razorpay launch/resume, merchant callback verification, bounded
+  retry, canonical polling, WebSocket refetch hints, audit chain, and public evidence handoff.
+- Added merchant review, full verify/reverify, explicit suspension, incident/quarantine, and immutable
+  agent assurance pages whose controls remain subject to API capability checks.
+- Added strict shared mandate usage, transaction detail, challenge/action, callback, purchase
+  preparation, list, audit, and evidence contracts; no application TypeScript `any` was introduced.
+- Added Phase 9/10 reproducible verifiers, Playwright/Axe public and authenticated accessibility
+  checks, 360px/tablet containment, keyboard, reduced-motion, reconnect coverage, ADR-0025/0026,
+  and verified the full format, lint, typecheck, test, build, and design-review gates.
+
+Verification record: `docs/verification/phase-10.md`.
+
 ## Blockers
 
 - Public SignalWorks deployment, stable HTTPS origins, and provider-to-Worker webhook delivery
   remain tracked by MP-1203; secrets must remain only in the SignalWorks Worker.
-- Live AI runs separately require `GOOGLE_GENERATIVE_AI_API_KEY`; the configured primary model is
+- Live AI runs require `GOOGLE_GENERATIVE_AI_API_KEY`; the configured primary model is
   Gemini 3.8 Flash (`gemini-3.8-flash`). Marketplace discovery, manual commerce, and all deterministic
-  Phase 5-7 verification remain available without it.
+  Phase 5-10 verification remain available without it.
