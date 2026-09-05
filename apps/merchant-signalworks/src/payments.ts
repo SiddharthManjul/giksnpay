@@ -5,6 +5,8 @@ import {
   merchantCheckoutSchema,
   merchantPaymentAuthorizationSchema,
   merchantPaymentOrderResponseSchema,
+  razorpayCheckoutCallbackResponseSchema,
+  razorpayCheckoutCallbackSchema,
 } from "@mindpay/contracts";
 import { sha256CanonicalJsonHex, sha256Hex } from "@mindpay/crypto";
 import { createUlid } from "@mindpay/domain";
@@ -73,14 +75,6 @@ const providerEventRowSchema = z
     processing_status: z.enum(["VERIFIED", "PROCESSED", "REJECTED"]),
     provider_event_id: z.string(),
     raw_payload_r2_key: z.string(),
-  })
-  .strict();
-
-const callbackSchema = z
-  .object({
-    razorpay_order_id: z.string().regex(/^order_[A-Za-z0-9]{8,64}$/u),
-    razorpay_payment_id: z.string().regex(/^pay_[A-Za-z0-9]{8,64}$/u),
-    razorpay_signature: z.string().regex(/^[0-9a-f]{64}$/u),
   })
   .strict();
 
@@ -303,7 +297,7 @@ async function verifyCheckoutCallback(
   dependencies: SignalWorksPaymentDependencies,
 ): Promise<Response> {
   const now = dependencies.now();
-  const parsed = callbackSchema.safeParse(await readCallbackBody(context.req.raw));
+  const parsed = razorpayCheckoutCallbackSchema.safeParse(await readCallbackBody(context.req.raw));
   if (!parsed.success) return jsonError(context, 400, "INVALID_CALLBACK");
   const order = await readPaymentOrderByProviderOrder(
     context.env.DB,
@@ -348,7 +342,13 @@ async function verifyCheckoutCallback(
       ),
     ]);
   }
-  return context.json({ fulfilment_eligible: false, state: "PAYMENT_RECONCILING" }, 202);
+  return context.json(
+    razorpayCheckoutCallbackResponseSchema.parse({
+      fulfilment_eligible: false,
+      state: "PAYMENT_RECONCILING",
+    }),
+    202,
+  );
 }
 
 async function acceptWebhook(
