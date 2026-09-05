@@ -32,6 +32,42 @@
       "preview_id": "b03cb0ab9a714505be07d26fa6d090db"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "EVIDENCE",
+      "bucket_name": "mindpay-evidence"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "EVIDENCE_QUEUE",
+        "queue": "mindpay-evidence-jobs"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "mindpay-evidence-jobs",
+        "dead_letter_queue": "mindpay-evidence-jobs-dlq",
+        "max_batch_size": 10,
+        "max_retries": 5
+      }
+    ]
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "TRANSACTION_EVENTS",
+        "class_name": "TransactionEventStream"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["TransactionEventStream"]
+    }
+  ],
   "services": [
     {
       "binding": "SIGNALWORKS",
