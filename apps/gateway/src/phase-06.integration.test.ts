@@ -3,9 +3,13 @@ import {
   importAgentKeyEncryptionKey,
 } from "@mindpay/agent-runtime";
 import {
+  deliveryReceiptSchema,
+  marketSnapshotResultSchema,
   merchantCheckoutSchema,
   merchantPaymentEventSchema,
   merchantPaymentOrderResponseSchema,
+  publicEvidenceBundleSchema,
+  signedDeliveryPublicationSchema,
 } from "@mindpay/contracts";
 import {
   bytesToBase64Url,
@@ -54,6 +58,7 @@ interface TestUser {
 describe("Phase 6 mandate, policy, approval, and reservation exit gate", () => {
   let bindings: GatewayAuthBindings;
   let allowedTransactionId = "";
+  let blockedTransactionId = "";
   let checkoutMandateId: string;
   let currentTime = new Date(FIXED_NOW);
   let database: D1Database;
@@ -61,6 +66,7 @@ describe("Phase 6 mandate, policy, approval, and reservation exit gate", () => {
   let miniflare: Miniflare;
   let owner: TestUser;
   let paymentMandateId: string;
+  let failedTransactionId = "";
   const paymentPublications = new Map<string, Readonly<{ event: unknown; signature: unknown }>>();
   let reviewedTransactionId = "";
   let presentedChallenge = "";
@@ -117,6 +123,8 @@ describe("Phase 6 mandate, policy, approval, and reservation exit gate", () => {
       onOrderCreation: orderCreationHook,
       verifyAuthenticationResponse: verifyAssertion,
     },
+    { now: () => new Date(currentTime) },
+    {},
     { now: () => new Date(currentTime) },
   );
 
@@ -326,6 +334,7 @@ describe("Phase 6 mandate, policy, approval, and reservation exit gate", () => {
       orderCreationInvoked: false,
       state: "BLOCKED",
     });
+    blockedTransactionId = required(blocked.body.transactionId as string | undefined);
     expect(orderCreationHook).not.toHaveBeenCalled();
   });
 
@@ -357,7 +366,91 @@ describe("Phase 6 mandate, policy, approval, and reservation exit gate", () => {
         .prepare("SELECT state FROM transactions WHERE id = ?")
         .bind(allowedTransactionId)
         .first(),
-    ).toEqual({ state: "PAYMENT_CAPTURED" });
+    ).toEqual({ state: "ENTITLEMENT_ISSUED" });
+    const issuedEntitlement = await database
+      .prepare(
+        `SELECT e.status, length(e.token_hash) AS token_hash_length, d.encrypted_token
+         FROM entitlements e JOIN entitlement_deliveries d ON d.entitlement_id = e.id
+         WHERE e.transaction_id = ?`,
+      )
+      .bind(allowedTransactionId)
+      .first<{ encrypted_token: string; status: string; token_hash_length: number }>();
+    expect(issuedEntitlement).toMatchObject({ status: "ISSUED", token_hash_length: 64 });
+    expect(issuedEntitlement?.encrypted_token).not.toContain("eyJ");
+    const entitlement = await database
+      .prepare("SELECT id FROM entitlements WHERE transaction_id = ?")
+      .bind(allowedTransactionId)
+      .first<{ id: string }>();
+    if (entitlement === null) throw new Error("Paid entitlement was not persisted");
+    const result = marketSnapshotResultSchema.parse({
+      data_source: "DETERMINISTIC_DEMO_FIXTURE",
+      executive_summary: "A deterministic test result that contains no live market claims.",
+      findings: [
+        {
+          confidence: "HIGH",
+          evidence: "The result is bound to the exact paid transaction and entitlement.",
+          finding: "Payment binding verified",
+        },
+        {
+          confidence: "MEDIUM",
+          evidence: "This test fixture intentionally contains no external market research.",
+          finding: "Production data source required",
+        },
+      ],
+      generated_at: currentTime.toISOString(),
+      market: "India",
+      schema_version: "signalworks.market_snapshot.1",
+      service_id: "market_snapshot",
+      subject_company: "Acme",
+    });
+    const outputHash = await sha256CanonicalJsonHex(result);
+    const deliveryReceiptId = `dlr_${createUlid(currentTime.getTime() + 30)}`;
+    const receipt = deliveryReceiptSchema.parse({
+      agent_id: AGENT_ID,
+      audience: API_AUDIENCE,
+      completed_at: currentTime.toISOString(),
+      delivery_receipt_id: deliveryReceiptId,
+      entitlement_id: entitlement.id,
+      expires_at: new Date(currentTime.getTime() + 24 * 60 * 60_000).toISOString(),
+      fulfilment_id: `ful_${createUlid(currentTime.getTime() + 31)}`,
+      issued_at: currentTime.toISOString(),
+      issuer: "https://merchant-demo.example.com/",
+      jti: deliveryReceiptId,
+      merchant_id: MERCHANT_ID,
+      output_hash: outputHash,
+      schema_version: "mindpay.delivery_receipt.1",
+      service_id: "market_snapshot",
+      status: "COMPLETED",
+      transaction_id: allowedTransactionId,
+    });
+    const publication = signedDeliveryPublicationSchema.parse({
+      receipt,
+      result,
+      signature: await signCanonicalJsonEs256(
+        receipt,
+        {
+          kid: "signalworks.event.phase7",
+          privateKey: merchantKeyPair.privateKey,
+          validFromEpochMs: FIXED_NOW.getTime(),
+        },
+        currentTime.getTime(),
+      ),
+    });
+    const delivered = await postDeliveryPublication(publication);
+    expect(delivered.status, await delivered.clone().text()).toBe(204);
+    expect((await postDeliveryPublication(publication)).status).toBe(204);
+    expect(
+      await database
+        .prepare("SELECT state FROM transactions WHERE id = ?")
+        .bind(allowedTransactionId)
+        .first(),
+    ).toEqual({ state: "FULFILLED" });
+    expect(
+      await database
+        .prepare("SELECT output_hash FROM fulfilment_results WHERE transaction_id = ?")
+        .bind(allowedTransactionId)
+        .first(),
+    ).toEqual({ output_hash: outputHash });
     expect(
       await database
         .prepare("SELECT spent_subunits, reserved_subunits FROM mandates WHERE id = ?")
@@ -379,7 +472,7 @@ describe("Phase 6 mandate, policy, approval, and reservation exit gate", () => {
       ).status,
     ).toBe(204);
 
-    const failedTransactionId = reviewedTransactionId;
+    failedTransactionId = reviewedTransactionId;
     const firstAttempt = await mutation(
       `/api/v1/transactions/${failedTransactionId}/checkout`,
       "phase7-failed-order-1",
@@ -437,6 +530,47 @@ describe("Phase 6 mandate, policy, approval, and reservation exit gate", () => {
     await expect(exhausted.json()).resolves.toMatchObject({
       error: { code: "PAYMENT_ATTEMPTS_EXHAUSTED" },
     });
+    expect(
+      await database
+        .prepare("SELECT count(*) AS count FROM entitlements WHERE transaction_id = ?")
+        .bind(failedTransactionId)
+        .first(),
+    ).toEqual({ count: 0 });
+  });
+
+  it("assembles portable evidence for successful, blocked, and exhausted-payment outcomes", async () => {
+    for (const [transactionId, expectedState] of [
+      [allowedTransactionId, "EVIDENCE_READY"],
+      [blockedTransactionId, "BLOCKED"],
+      [failedTransactionId, "PAYMENT_FAILED"],
+    ] as const) {
+      const assembled = await apiRequest(`/api/v1/transactions/${transactionId}/evidence`, {
+        method: "GET",
+      });
+      expect(assembled.status, await assembled.clone().text()).toBe(200);
+      const evidence = publicEvidenceBundleSchema.parse(await assembled.json());
+      expect(evidence.verified).toBe(true);
+      expect(evidence.bundle?.transaction.state).toBe(expectedState);
+      expect(evidence.proofResults).toHaveLength(9);
+      expect(evidence.proofResults.some((proof) => proof.status === "FAIL")).toBe(false);
+      expect(evidence.signature).not.toBeNull();
+      expect(evidence.auditSignatures).toHaveLength(evidence.bundle?.audit.event_count ?? 0);
+
+      const portable = await app.request(
+        `${AUTH_URL}/api/v1/evidence/${evidence.evidenceId}`,
+        { headers: { origin: FRONTEND_ORIGIN }, method: "GET" },
+        bindings,
+      );
+      expect(portable.status).toBe(200);
+      await expect(portable.json()).resolves.toMatchObject({
+        bundle: evidence.bundle,
+        bundleHash: evidence.bundleHash,
+        evidenceId: evidence.evidenceId,
+        proofResults: evidence.proofResults,
+        signingKid: evidence.signingKid,
+        verified: true,
+      });
+    }
   });
 
   it("revokes before reservation and leaves the budget counters unchanged", async () => {
@@ -526,7 +660,23 @@ describe("Phase 6 mandate, policy, approval, and reservation exit gate", () => {
           "INSERT INTO merchant_keys (id, merchant_id, kid, purpose, public_jwk, fingerprint, valid_from, valid_until, revoked_at, created_at) VALUES ('mky_phase7_event', ?, 'signalworks.event.phase7', 'event', ?, ?, ?, NULL, NULL, ?)",
         )
         .bind(MERCHANT_ID, JSON.stringify(merchantPublicJwk), "e".repeat(64), now, now),
+      database
+        .prepare(
+          "INSERT INTO merchant_manifests (id, merchant_id, schema_version, manifest_json, manifest_hash, signature, verified_at, expires_at, created_at) VALUES ('mmf_phase6', ?, '1', '{}', ?, '{}', ?, ?, ?)",
+        )
+        .bind(MERCHANT_ID, "f".repeat(64), now, now + 86_400_000, now),
+      database
+        .prepare(
+          "INSERT INTO merchant_catalogs (id, merchant_id, version, catalog_hash, catalog_json, signature, verified_at, expires_at, created_at) VALUES ('mct_phase6', ?, '1.0.0', ?, '{}', '{}', ?, ?, ?)",
+        )
+        .bind(MERCHANT_ID, "c".repeat(64), now, now + 86_400_000, now),
     ]);
+    await database
+      .prepare(
+        "UPDATE merchants SET current_manifest_id = 'mmf_phase6', current_catalog_id = 'mct_phase6', updated_at = ? WHERE id = ?",
+      )
+      .bind(now, MERCHANT_ID)
+      .run();
     await database
       .prepare("UPDATE agent_versions SET published_at = ? WHERE id = ?")
       .bind(now, AGENT_VERSION_ID)
@@ -784,6 +934,21 @@ describe("Phase 6 mandate, policy, approval, and reservation exit gate", () => {
   ) {
     return app.request(
       `${AUTH_URL}/api/internal/v1/merchant-payment-events`,
+      {
+        body: JSON.stringify(publication),
+        headers: {
+          Authorization: `Bearer ${SIGNALWORKS_MACHINE_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      },
+      bindings,
+    );
+  }
+
+  function postDeliveryPublication(publication: unknown) {
+    return app.request(
+      `${AUTH_URL}/api/internal/v1/merchant-delivery-receipts`,
       {
         body: JSON.stringify(publication),
         headers: {
