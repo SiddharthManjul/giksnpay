@@ -2,6 +2,7 @@ import {
   apiErrorResponseSchema,
   type MerchantAdministrationResponse,
   merchantAdministrationResponseSchema,
+  merchantAdministrationListResponseSchema,
   merchantIdSchema,
   merchantManifestSchema,
   merchantSubmissionRequestSchema,
@@ -87,6 +88,44 @@ export function createMerchantAdminRoutes(
 ) {
   const routes = new Hono<GatewayEnvironment>();
   routes.use("*", requireAuthentication);
+
+  routes.get("/", requireOrganizationCapability("merchant:review"), async (context) => {
+    const result = await context.env.DB.prepare(
+      `SELECT m.id, m.name, m.domain, m.status, m.verification_status, m.verification_tier,
+       m.risk_tier, m.last_verification_at, mc.version AS catalog_version
+       FROM merchants m LEFT JOIN merchant_catalogs mc ON mc.id = m.current_catalog_id
+       WHERE m.organization_id = ? ORDER BY m.updated_at DESC, m.id DESC LIMIT 1000`,
+    )
+      .bind(context.get("organizationAuthorization").organization.id)
+      .all();
+    return context.json(
+      merchantAdministrationListResponseSchema.parse({
+        merchants: result.results.map((untrusted) => {
+          const row = z
+            .object({
+              catalog_version: z.string().nullable(),
+              domain: z.string(),
+              id: z.string(),
+              last_verification_at: z.number().nullable(),
+              name: z.string(),
+              risk_tier: z.string(),
+              status: z.string(),
+              verification_status: z.string(),
+              verification_tier: z.string(),
+            })
+            .strict()
+            .parse(untrusted);
+          const failed = ["QUARANTINED", "REVIEW_REQUIRED"].includes(row.verification_status);
+          return administrationResponse(
+            row,
+            row.verification_status === "APPROVED" ? "PASSED" : failed ? "FAILED" : "NOT_RUN",
+            failed ? row.verification_status : null,
+            row.catalog_version,
+          );
+        }),
+      }),
+    );
+  });
 
   routes.post("/", requireOrganizationCapability("merchant:submit"), async (context) => {
     const request = merchantSubmissionRequestSchema.safeParse(await readJsonBody(context.req.raw));
