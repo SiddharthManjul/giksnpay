@@ -1,11 +1,17 @@
 import {
-  agentIdSchema,
   authenticatorTransportSchema,
+  authorizationApprovalRequestSchema,
+  authorizationChallengeRequestSchema,
   mandateIdSchema,
   merchantHttpsUrlSchema,
   openCheckoutMandateSchema,
   openPaymentMandateSchema,
   passkeyCredentialIdSchema,
+  createMandateRequestSchema,
+  createMandatesResponseSchema,
+  mandateResponseSchema,
+  mandateChallengeResponseSchema,
+  mandatesResponseSchema,
 } from "@mindpay/contracts";
 import {
   base64UrlToBytes,
@@ -14,7 +20,7 @@ import {
   sha256Hex,
   timingSafeEqual,
 } from "@mindpay/crypto";
-import { createUlid, utcTimestampFromDate, utcTimestampSchema } from "@mindpay/domain";
+import { createUlid, utcTimestampFromDate } from "@mindpay/domain";
 import {
   type AuthenticationResponseJSON,
   generateAuthenticationOptions,
@@ -49,53 +55,6 @@ export interface MandateRouteDependencies {
   readonly now?: () => Date;
   readonly verifyAuthenticationResponse?: typeof verifyAuthenticationResponse;
 }
-
-const createMandateRequestSchema = z
-  .object({
-    agentId: agentIdSchema,
-    allowedCategories: z.array(z.string().min(3).max(96)).min(1).max(100),
-    allowedMerchants: z.array(z.string().min(12).max(96)).min(1).max(100),
-    allowedRails: z.array(z.literal("razorpay:test")).min(1).max(1),
-    allowedServices: z.array(z.string().min(3).max(96)).min(1).max(500),
-    approvalThresholdSubunits: z.number().int().nonnegative(),
-    currency: z.literal("INR"),
-    expiresAt: utcTimestampSchema,
-    maxAttemptsPerTransaction: z.number().int().min(1).max(10),
-    maxLineItems: z.number().int().min(1).max(20),
-    maxQuantityPerItem: z.number().int().min(1).max(100),
-    maxTransactionSubunits: z.number().int().nonnegative(),
-    maxTransactions: z.number().int().min(1).max(1_000),
-    maxUnitPriceSubunits: z.number().int().nonnegative(),
-    passkeyId: passkeyCredentialIdSchema,
-    totalBudgetSubunits: z.number().int().nonnegative(),
-  })
-  .strict()
-  .superRefine((value, context) => {
-    if (value.approvalThresholdSubunits > value.maxTransactionSubunits) {
-      context.addIssue({
-        code: "custom",
-        message: "Approval threshold cannot exceed the per-transaction maximum",
-        path: ["approvalThresholdSubunits"],
-      });
-    }
-    if (value.maxTransactionSubunits > value.totalBudgetSubunits) {
-      context.addIssue({
-        code: "custom",
-        message: "Per-transaction maximum cannot exceed the total budget",
-        path: ["maxTransactionSubunits"],
-      });
-    }
-  });
-
-const mandateChallengeRequestSchema = z
-  .object({ credentialId: passkeyCredentialIdSchema })
-  .strict();
-const mandateActivationRequestSchema = z
-  .object({
-    challengeId: z.string().regex(/^apc_[0-7][0-9A-HJKMNP-TV-Z]{25}$/u),
-    response: z.record(z.string(), z.unknown()),
-  })
-  .strict();
 
 const mandateRowSchema = z
   .object({
@@ -296,12 +255,17 @@ export function createMandateRoutes(dependencies: MandateRouteDependencies = {})
       );
     }
 
-    return completeIdempotentMutation(context, claim, 201, {
-      mandates: [
-        mandateResponse(checkoutMandate, checkoutHash, "DRAFT"),
-        mandateResponse(paymentMandate, paymentHash, "DRAFT"),
-      ],
-    });
+    return completeIdempotentMutation(
+      context,
+      claim,
+      201,
+      createMandatesResponseSchema.parse({
+        mandates: [
+          mandateResponse(checkoutMandate, checkoutHash, "DRAFT"),
+          mandateResponse(paymentMandate, paymentHash, "DRAFT"),
+        ],
+      }),
+    );
   });
 
   routes.get("/", async (context) => {
@@ -311,7 +275,9 @@ export function createMandateRoutes(dependencies: MandateRouteDependencies = {})
     )
       .bind(context.get("organizationAuthorization").organization.id, context.get("principal").id)
       .all();
-    return context.json({ mandates: rows.results.map(parseMandateResponse) });
+    return context.json(
+      mandatesResponseSchema.parse({ mandates: rows.results.map(parseMandateResponse) }),
+    );
   });
 
   routes.get("/:mandateId", async (context) => {
@@ -325,7 +291,7 @@ export function createMandateRoutes(dependencies: MandateRouteDependencies = {})
     requireOrganizationCapability("agent:write"),
     async (context) => {
       const body = await readJsonBody(context.req.raw);
-      const request = mandateChallengeRequestSchema.safeParse(body);
+      const request = authorizationChallengeRequestSchema.safeParse(body);
       const createdAt = now();
       if (!request.success) {
         return apiError(context, 400, "INVALID_REQUEST", "The approval request is invalid.");
@@ -425,7 +391,12 @@ export function createMandateRoutes(dependencies: MandateRouteDependencies = {})
           createdAt.getTime(),
         )
         .run();
-      return completeIdempotentMutation(context, claim, 201, { challengeId, options });
+      return completeIdempotentMutation(
+        context,
+        claim,
+        201,
+        mandateChallengeResponseSchema.parse({ challengeId, options }),
+      );
     },
   );
 
@@ -434,7 +405,7 @@ export function createMandateRoutes(dependencies: MandateRouteDependencies = {})
     requireOrganizationCapability("agent:write"),
     async (context) => {
       const body = await readJsonBody(context.req.raw);
-      const request = mandateActivationRequestSchema.safeParse(body);
+      const request = authorizationApprovalRequestSchema.safeParse(body);
       const verifiedAt = now();
       if (!request.success) {
         return apiError(context, 400, "INVALID_REQUEST", "The activation proof is invalid.");
@@ -797,13 +768,22 @@ async function ownedPasskey(
   return row === null ? undefined : passkeyRowSchema.parse(row);
 }
 
-function mandateResponse(mandate: unknown, payloadHash: string, status: string) {
-  return Object.freeze({ mandate, payloadHash, status });
+function mandateResponse(
+  mandate: unknown,
+  payloadHash: string,
+  status: string,
+  usage = { completedTransactions: 0, reservedSubunits: 0, spentSubunits: 0 },
+) {
+  return mandateResponseSchema.parse({ mandate, payloadHash, status, usage });
 }
 
 function parseMandateResponse(untrusted: unknown) {
   const row = mandateRowSchema.parse(untrusted);
-  return mandateResponse(JSON.parse(row.payload_json) as unknown, row.payload_hash, row.status);
+  return mandateResponse(JSON.parse(row.payload_json) as unknown, row.payload_hash, row.status, {
+    completedTransactions: row.completed_transactions,
+    reservedSubunits: row.reserved_subunits,
+    spentSubunits: row.spent_subunits,
+  });
 }
 
 function parseJsonArray(value: string): string[] {
